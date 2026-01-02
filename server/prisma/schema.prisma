@@ -3,7 +3,7 @@
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native"]
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -74,3 +74,7 @@ model Booking {
   @@map("bookings")
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> a0a0df1 (fix)
