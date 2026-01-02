@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  guest
+  host
+  admin
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  cancelled
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(guest)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  
+  // Relations
+  properties   Property[]
+  bookings     Booking[]
+  
+  @@map("users")
+}
+
+model Property {
+  id            String   @id @default(uuid())
+  hostId        String   @map("host_id")
+  title         String
+  description   String   @db.Text
+  pricePerNight Float    @map("price_per_night")
+  location      String
+  images        String[] @default([])
+  amenities     Json     @default("[]")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  host          User     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  bookings      Booking[]
+  
+  @@map("properties")
+}
+
+model Booking {
+  id         String        @id @default(uuid())
+  propertyId String        @map("property_id")
+  userId     String        @map("user_id")
+  startDate  DateTime      @map("start_date")
+  endDate    DateTime      @map("end_date")
+  totalPrice Float         @map("total_price")
+  status     BookingStatus @default(pending)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  
+  // Relations
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("bookings")
+}
+
