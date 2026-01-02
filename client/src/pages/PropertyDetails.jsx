@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { MapPin, Calendar, DollarSign } from 'lucide-react'
+import { MapPin, Calendar, DollarSign, Cloud, Thermometer, Droplets, Wind, Eye } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
+import Chat from '../components/Chat'
 
 export default function PropertyDetails() {
   const { id } = useParams()
@@ -18,6 +19,17 @@ export default function PropertyDetails() {
       const response = await api.get(`/properties/${id}`)
       return response.data.property
     },
+  })
+
+  // Fetch weather if country is set
+  const { data: weather, isLoading: weatherLoading } = useQuery({
+    queryKey: ['weather', property?.country],
+    queryFn: async () => {
+      if (!property?.country) return null
+      const response = await api.get(`/weather/${encodeURIComponent(property.country)}`)
+      return response.data
+    },
+    enabled: !!property?.country,
   })
 
   const bookingMutation = useMutation({
@@ -82,9 +94,16 @@ export default function PropertyDetails() {
         {/* Main Content */}
         <div className="lg:col-span-2">
           <h1 className="text-3xl font-bold mb-4">{property.title}</h1>
-          <div className="flex items-center text-gray-600 mb-6">
-            <MapPin className="h-5 w-5 mr-2" />
-            <span>{property.location}</span>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center text-gray-600">
+              <MapPin className="h-5 w-5 mr-2" />
+              <span>{property.location}</span>
+              {property.country && <span className="ml-2 text-gray-500">• {property.country}</span>}
+            </div>
+            <div className="flex items-center text-gray-600 text-sm">
+              <Eye className="h-4 w-4 mr-1" />
+              <span>{property.views || 0} переглядів</span>
+            </div>
           </div>
 
           {/* Image Gallery */}
@@ -114,7 +133,7 @@ export default function PropertyDetails() {
           </div>
 
           {amenities.length > 0 && (
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-2xl font-semibold mb-4">Зручності</h2>
               <ul className="grid grid-cols-2 gap-2">
                 {amenities.map((amenity, index) => (
@@ -123,6 +142,53 @@ export default function PropertyDetails() {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Weather Section */}
+          {weather && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-2xl font-semibold mb-4 flex items-center">
+                <Cloud className="h-6 w-6 mr-2 text-blue-600" />
+                Погода в {weather.location || property.country}
+              </h2>
+              {weatherLoading ? (
+                <div className="text-center py-4">Завантаження погоди...</div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Thermometer className="h-5 w-5 text-red-500" />
+                    <div>
+                      <p className="text-sm text-gray-600">Температура</p>
+                      <p className="text-lg font-semibold">{weather.temperature}°C</p>
+                      {weather.feelsLike && (
+                        <p className="text-xs text-gray-500">Відчувається як {weather.feelsLike}°C</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Cloud className="h-5 w-5 text-gray-500" />
+                    <div>
+                      <p className="text-sm text-gray-600">Погода</p>
+                      <p className="text-lg font-semibold capitalize">{weather.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Droplets className="h-5 w-5 text-blue-500" />
+                    <div>
+                      <p className="text-sm text-gray-600">Вологість</p>
+                      <p className="text-lg font-semibold">{weather.humidity}%</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Wind className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-600">Вітер</p>
+                      <p className="text-lg font-semibold">{weather.windSpeed} км/год</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -202,6 +268,14 @@ export default function PropertyDetails() {
           </div>
         </div>
       </div>
+
+      {property.host && user  && (
+        <Chat
+          propertyId={property.id}
+          hostId={property.host.id}
+          hostEmail={property.host.email}
+        />
+      )}
     </div>
   )
 }

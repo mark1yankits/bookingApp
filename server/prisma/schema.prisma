@@ -33,6 +33,8 @@ model User {
   // Relations
   properties   Property[]
   bookings     Booking[]
+  sentMessages Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
   
   @@map("users")
 }
@@ -46,12 +48,15 @@ model Property {
   location      String
   images        String[] @default([])
   amenities     Json     @default("[]")
+  views         Int      @default(0)
+  country       String?
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   
   // Relations
   host          User     @relation(fields: [hostId], references: [id], onDelete: Cascade)
   bookings      Booking[]
+  messages      Message[]
   
   @@map("properties")
 }
@@ -74,7 +79,18 @@ model Booking {
   @@map("bookings")
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> a0a0df1 (fix)
+model Message {
+  id         String   @id @default(uuid())
+  propertyId String   @map("property_id")
+  senderId   String   @map("sender_id")
+  receiverId String   @map("receiver_id")
+  content    String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+}

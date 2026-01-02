@@ -9,6 +9,8 @@ import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import propertyRoutes from './routes/properties.js';
 import bookingRoutes from './routes/bookings.js';
+import messageRoutes from './routes/messages.js';
+import weatherRoutes from './routes/weather.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -39,6 +41,8 @@ app.get('/health', (req, res) => {
 app.use('/auth', authRoutes);
 app.use('/properties', propertyRoutes);
 app.use('/bookings', bookingRoutes);
+app.use('/messages', messageRoutes);
+app.use('/weather', weatherRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

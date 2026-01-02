@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Calendar, Home, Plus, DollarSign, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Calendar, Home, Plus, DollarSign, CheckCircle, XCircle, Clock, Eye, MessageCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
 import { Link } from 'react-router-dom'
@@ -15,6 +15,7 @@ export default function Dashboard() {
     pricePerNight: '',
     location: '',
     amenities: '',
+    country: '',
   })
   const [images, setImages] = useState([])
 
@@ -34,6 +35,16 @@ export default function Dashboard() {
     queryFn: async () => {
       const response = await api.get('/bookings/host-bookings')
       return response.data.bookings
+    },
+    enabled: !!user && (user.role === 'host' || user.role === 'admin'),
+  })
+
+  // Fetch host's properties
+  const { data: myProperties, isLoading: propertiesLoading } = useQuery({
+    queryKey: ['myProperties'],
+    queryFn: async () => {
+      const response = await api.get('/properties/host/my-properties')
+      return response.data.properties
     },
     enabled: !!user && (user.role === 'host' || user.role === 'admin'),
   })
@@ -58,6 +69,7 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['properties'])
+      queryClient.invalidateQueries(['myProperties'])
       setShowPropertyForm(false)
       setPropertyForm({
         title: '',
@@ -65,6 +77,7 @@ export default function Dashboard() {
         pricePerNight: '',
         location: '',
         amenities: '',
+        country: '',
       })
       setImages([])
       alert('Нерухомість успішно додано!')
@@ -210,6 +223,33 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Країна
+                  </label>
+                  <select
+                    value={propertyForm.country}
+                    onChange={(e) =>
+                      setPropertyForm({
+                        ...propertyForm,
+                        country: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Оберіть країну</option>
+                    <option value="Україна">Україна</option>
+                    <option value="Іспанія">Іспанія</option>
+                    <option value="Франція">Франція</option>
+                    <option value="Італія">Італія</option>
+                    <option value="Португалія">Португалія</option>
+                    <option value="Греція">Греція</option>
+                    <option value="Туреччина">Туреччина</option>
+                    <option value="Хорватія">Хорватія</option>
+                    <option value="Польща">Польща</option>
+                    <option value="Чехія">Чехія</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Зручності (через кому)
                   </label>
                   <input
@@ -256,6 +296,68 @@ export default function Dashboard() {
               </form>
             </div>
           )}
+
+          {/* My Properties */}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-4">Мої оголошення</h3>
+            {propertiesLoading ? (
+              <div className="text-center py-8">Завантаження...</div>
+            ) : myProperties && myProperties.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {myProperties.map((property) => (
+                  <div
+                    key={property.id}
+                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                  >
+                    {property.images && property.images.length > 0 ? (
+                      <img
+                        src={
+                          property.images[0].startsWith('http')
+                            ? property.images[0]
+                            : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${property.images[0]}`
+                        }
+                        alt={property.title}
+                        className="w-full h-48 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-400">Немає зображення</span>
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <Link
+                        to={`/property/${property.id}`}
+                        className="text-lg font-semibold text-blue-600 hover:underline block mb-2"
+                      >
+                        {property.title}
+                      </Link>
+                      <p className="text-gray-600 text-sm mb-3">{property.location}</p>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xl font-bold text-blue-600">
+                          {property.pricePerNight} ₴
+                        </span>
+                        <span className="text-sm text-gray-500">за ніч</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-gray-600 pt-3 border-t">
+                        <div className="flex items-center space-x-1">
+                          <Eye className="h-4 w-4" />
+                          <span>{property.views || 0} переглядів</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <MessageCircle className="h-4 w-4" />
+                          <span>{property.bookings?.length || 0} бронювань</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-600">
+                У вас немає оголошень. Створіть перше оголошення!
+              </div>
+            )}
+          </div>
 
           {/* Host Bookings */}
           <div className="mb-8">

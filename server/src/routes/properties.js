@@ -58,7 +58,7 @@ router.get(
   }
 );
 
-// Get single property by ID
+// Get single property by ID (increment views)
 router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -82,7 +82,25 @@ router.get('/:id', async (req, res, next) => {
       });
     }
 
-    res.json({ property });
+    // Increment views
+    await prisma.property.update({
+      where: { id },
+      data: { views: { increment: 1 } },
+    });
+
+    const updatedProperty = await prisma.property.findUnique({
+      where: { id },
+      include: {
+        host: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    res.json({ property: updatedProperty });
   } catch (error) {
     next(error);
   }
@@ -110,7 +128,7 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { title, description, pricePerNight, location, amenities } = req.body;
+      const { title, description, pricePerNight, location, amenities, country } = req.body;
 
       // Parse amenities if provided as string
       let amenitiesData = [];
@@ -144,6 +162,7 @@ router.post(
           location,
           images: imageUrls,
           amenities: amenitiesData,
+          country: country || null,
         },
         include: {
           host: {
@@ -164,6 +183,30 @@ router.post(
     }
   }
 );
+
+// Get host's properties
+router.get('/host/my-properties', authenticate, requireRole('host', 'admin'), async (req, res, next) => {
+  try {
+    const properties = await prisma.property.findMany({
+      where: { hostId: req.user.id },
+      include: {
+        bookings: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    res.json({ properties });
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;
 
