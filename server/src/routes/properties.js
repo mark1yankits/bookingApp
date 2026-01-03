@@ -1,14 +1,16 @@
 import express from 'express';
-import path from 'path'; 
+import path from 'path';
 import { body, validationResult, query } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { upload, uploadFile } from '../utils/upload.js';
 
+const jsonParser = express.json({ limit: '10mb' });
+const urlencodedParser = express.urlencoded({ extended: true, limit: '10mb' });
+
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Get all properties with optional filters
 router.get(
   '/',
   [
@@ -113,14 +115,17 @@ router.post(
   authenticate,
   requireRole('host', 'admin'),
   upload.array('images', 10),
+  urlencodedParser,
   [
     body('title').notEmpty().withMessage('Title is required'),
     body('description').notEmpty().withMessage('Description is required'),
-    body('pricePerNight')
-      .isFloat({ min: 0 })
-      .withMessage('Valid price is required'),
+    body('price').isFloat({ min: 0 }).withMessage('Valid price is required'),
     body('location').notEmpty().withMessage('Location is required'),
-    body('amenities').optional().isJSON().withMessage('Amenities must be valid JSON'),
+    body('amenities').optional().isString(),
+    body('rules').optional().isString(),
+    body('bedrooms').optional().isInt({ min: 1 }).withMessage('Bedrooms must be a positive integer'),
+    body('bathrooms').optional().isInt({ min: 1 }).withMessage('Bathrooms must be a positive integer'),
+    body('maxGuests').optional().isInt({ min: 1 }).withMessage('Max guests must be a positive integer'),
   ],
   async (req, res, next) => {
     try {
@@ -129,19 +134,36 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { title, description, pricePerNight, location, amenities, country } = req.body;
+      const {
+        title,
+        description,
+        price,
+        location,
+        amenities,
+        country,
+        type,
+        bedrooms,
+        bathrooms,
+        maxGuests,
+        checkInTime,
+        checkOutTime,
+        rules
+      } = req.body;
 
-      // Parse amenities if provided as string
+      // Parse amenities if provided as string (comma-separated)
       let amenitiesData = [];
-      if (amenities) {
-        try {
-          amenitiesData = typeof amenities === 'string' ? JSON.parse(amenities) : amenities;
-        } catch (e) {
-          return res.status(400).json({
-            error: 'Validation Error',
-            message: 'Invalid amenities format',
-          });
-        }
+      if (amenities && typeof amenities === 'string') {
+        amenitiesData = amenities.split(',').map(a => a.trim()).filter(a => a);
+      } else if (amenities && Array.isArray(amenities)) {
+        amenitiesData = amenities;
+      }
+
+      // Parse rules if provided as string (newline-separated)
+      let rulesData = [];
+      if (rules && typeof rules === 'string') {
+        rulesData = rules.split('\n').map(r => r.trim()).filter(r => r);
+      } else if (rules && Array.isArray(rules)) {
+        rulesData = rules;
       }
 
       // Upload images
@@ -173,11 +195,18 @@ if (req.files && req.files.length > 0) {
           hostId: req.user.id,
           title,
           description,
-          pricePerNight: parseFloat(pricePerNight),
+          pricePerNight: parseFloat(price),
           location,
           images: imageUrls,
           amenities: amenitiesData,
           country: country || null,
+          type: type || null,
+          bedrooms: bedrooms ? parseInt(bedrooms) : null,
+          bathrooms: bathrooms ? parseInt(bathrooms) : null,
+          maxGuests: maxGuests ? parseInt(maxGuests) : null,
+          checkInTime: checkInTime || null,
+          checkOutTime: checkOutTime || null,
+          rules: rulesData,
         },
         include: {
           host: {

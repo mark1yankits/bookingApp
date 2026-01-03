@@ -62,7 +62,11 @@ if (s3Client && process.env.AWS_S3_BUCKET &&
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 5 * 1024 * 1024, 
+    fieldSize: 50 * 1024 * 1024, 
+    fields: 100, 
+    files: 10, 
+    parts: 150, 
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;

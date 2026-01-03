@@ -45,7 +45,8 @@ export default function Dashboard() {
     checkOutTime: '12:00',
     amenities: '',
     rules: '',
-    images: []
+    images: [],
+    imageFiles: [] // Зберігаємо оригінальні File об'єкти
   })
   const [dragActive, setDragActive] = useState(false)
 
@@ -85,16 +86,18 @@ export default function Dashboard() {
       Object.keys(formData).forEach((key) => {
         if (key !== 'images') {
           if (key === 'amenities') {
-            data.append(key, JSON.stringify(formData[key].split(',').map(a => a.trim()).filter(a => a)))
+            // Передаємо amenities як окремий рядок, сервер сам розпарсить
+            data.append(key, formData[key])
           } else if (key === 'rules') {
-            data.append(key, JSON.stringify(formData[key].split('\n').map(r => r.trim()).filter(r => r)))
+            // Передаємо rules як окремий рядок, сервер сам розпарсить
+            data.append(key, formData[key])
           } else {
-          data.append(key, formData[key])
+            data.append(key, formData[key])
           }
         }
       })
-      formData.images.forEach((image) => {
-        data.append('images', image)
+      formData.imageFiles.forEach((file) => {
+        data.append('images', file)
       })
       const response = await api.post('/properties', data, {
         headers: {
@@ -121,7 +124,8 @@ export default function Dashboard() {
         checkOutTime: '12:00',
         amenities: '',
         rules: '',
-        images: []
+        images: [],
+        imageFiles: []
       })
       alert('Нерухомість успішно додано!')
     },
@@ -149,7 +153,7 @@ export default function Dashboard() {
       return
     }
 
-    if (propertyForm.images.length === 0) {
+    if (propertyForm.imageFiles.length === 0) {
       alert('Додайте хоча б одне зображення')
       return
     }
@@ -202,7 +206,8 @@ export default function Dashboard() {
         if (e.target?.result) {
           setPropertyForm(prev => ({
             ...prev,
-            images: [...prev.images, e.target.result]
+            images: [...prev.images, e.target.result], // base64 для preview
+            imageFiles: [...prev.imageFiles, file]     // оригінальний файл
           }))
         }
       }
@@ -213,7 +218,8 @@ export default function Dashboard() {
   const removeImage = (index) => {
     setPropertyForm(prev => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: prev.images.filter((_, i) => i !== index),
+      imageFiles: prev.imageFiles.filter((_, i) => i !== index)
     }))
   }
 
