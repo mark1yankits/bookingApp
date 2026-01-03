@@ -223,5 +223,68 @@ router.get('/host/my-properties', authenticate, requireRole('host', 'admin'), as
   }
 });
 
+// Search locations for autocomplete
+router.get('/locations/search', async (req, res, next) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.length < 2) {
+      return res.json({ locations: [] });
+    }
+
+    // Get unique locations that match the search query
+    const properties = await prisma.property.findMany({
+      where: {
+        location: {
+          contains: q,
+          mode: 'insensitive',
+        },
+      },
+      select: {
+        location: true,
+        country: true,
+      },
+      take: 10, // Limit results
+      distinct: ['location'], // Get unique locations
+    });
+
+    // Also search by country if available
+    let countryResults = [];
+    if (properties.length < 5) {
+      countryResults = await prisma.property.findMany({
+        where: {
+          country: {
+            contains: q,
+            mode: 'insensitive',
+          },
+        },
+        select: {
+          location: true,
+          country: true,
+        },
+        take: 10,
+        distinct: ['location'],
+      });
+    }
+
+    // Combine and deduplicate results
+    const allResults = [...properties, ...countryResults];
+    const uniqueLocations = allResults.filter((item, index, self) =>
+      index === self.findIndex(t => t.location === item.location)
+    );
+
+    // Format results
+    const locations = uniqueLocations.map(item => ({
+      name: item.location,
+      country: item.country || '',
+      displayName: item.country ? `${item.location}, ${item.country}` : item.location,
+    }));
+
+    res.json({ locations });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
 
