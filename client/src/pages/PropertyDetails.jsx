@@ -253,9 +253,10 @@ export default function PropertyDetails() {
 
   return (
     <div
-      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in"
       onKeyDown={handleKeyDown}
       tabIndex={0}
+      style={{ backgroundColor: 'var(--bg-primary)' }}
     >
       {/* Кнопка назад */}
       <button
@@ -352,7 +353,7 @@ export default function PropertyDetails() {
           )}
 
           {/* Інформація про нерухомість */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-[var(--bg-tertiary)] rounded-lg shadow-md p-6 mb-6 border border-[var(--border-color)] animate-scale-in">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h1 className="text-3xl text-gray-900 mb-2">{property.title}</h1>
@@ -452,9 +453,9 @@ export default function PropertyDetails() {
 
           {/* Weather Section */}
           {weather && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                <Cloud className="h-6 w-6 mr-2 text-blue-600" />
+            <div className="bg-[var(--bg-tertiary)] rounded-lg shadow-md p-6 border border-[var(--border-color)] animate-bounce-in">
+              <h2 className="text-2xl font-semibold mb-4 flex items-center" style={{ color: 'var(--text-primary)' }}>
+                <Cloud className="h-6 w-6 mr-2" style={{ color: 'var(--accent-color)' }} />
                 Погода в {weather.location || property.country}
               </h2>
               {weatherLoading ? (
@@ -498,7 +499,7 @@ export default function PropertyDetails() {
           )}
 
           {/* Reviews Section */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-[var(--bg-tertiary)] rounded-lg shadow-md p-6 border border-[var(--border-color)]">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl text-gray-900 flex items-center gap-2">
                 <MessageSquare className="w-6 h-6" />
@@ -713,7 +714,7 @@ export default function PropertyDetails() {
 
         {/* Booking Sidebar */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-md p-6 sticky top-24">
+          <div className="bg-[var(--bg-tertiary)] rounded-lg shadow-md p-6 sticky top-24 border border-[var(--border-color)] animate-slide-in">
             <div className="mb-6">
               <div className="flex items-baseline gap-2 mb-2">
                 <span className="text-3xl text-gray-900">{property.pricePerNight} ₴</span>

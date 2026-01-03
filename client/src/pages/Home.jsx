@@ -19,7 +19,6 @@ const popularLocations = [
 ]
 
 export default function Home() {
-  const { user } = useAuth()
   const [searchLocation, setSearchLocation] = useState('')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
@@ -85,9 +84,9 @@ export default function Home() {
   }, [properties])
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Hero секція */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-900 text-white py-20">
+      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20 animate-slide-in">
         <div className="max-w-7xl mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
             <h1 className="text-5xl mb-6">Знайдіть ідеальне житло для оренди</h1>
@@ -98,23 +97,24 @@ export default function Home() {
           </div>
 
           {/* Пошукова панель */}
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-5xl mx-auto">
+          <div className="bg-[var(--bg-tertiary)] rounded-lg shadow-lg p-6 max-w-5xl mx-auto border border-[var(--border-color)] hover-lift">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
               {/* Місцезнаходження */}
               <div className="relative lg:col-span-2">
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Місцезнаходження
                 </label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: 'var(--text-muted)' }} />
                   <input
                     type="text"
                     value={searchLocation}
                     onChange={(e) => setSearchLocation(e.target.value)}
                     onFocus={() => setShowSuggestions(true)}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    className="w-full pl-10 pr-4 py-3 border border-[var(--border-color)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)]"
+                    style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}
                     placeholder="Куди плануєте поїхати?"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   />
                 </div>
                 {showSuggestions && locationSuggestions.length > 0 && (
@@ -138,7 +138,7 @@ export default function Home() {
 
               {/* Мінімальна ціна */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Від (₴)
                 </label>
                 <input
@@ -146,13 +146,14 @@ export default function Home() {
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
                   placeholder="500"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full px-4 py-3 border border-[var(--border-color)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)]"
+                  style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}
                 />
               </div>
 
               {/* Максимальна ціна */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   До (₴)
                 </label>
                 <input
@@ -160,13 +161,22 @@ export default function Home() {
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
                   placeholder="3000"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full px-4 py-3 border border-[var(--border-color)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)]"
+                  style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}
                 />
               </div>
 
               {/* Кнопка пошуку */}
               <div className="flex items-end">
-                <button className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                <button
+                  className="w-full px-6 py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 hover-lift"
+                  style={{
+                    backgroundColor: 'var(--accent-color)',
+                    color: 'white'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-hover)'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent-color)'}
+                >
                   <Search className="w-5 h-5" />
                   Пошук
                 </button>
@@ -174,16 +184,17 @@ export default function Home() {
             </div>
 
             {/* Додаткові фільтри */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
               {/* Тип житла */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Тип житла
                 </label>
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full px-4 py-2 border border-[var(--border-color)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)]"
+                  style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}
                 >
                   <option value="all">Всі типи</option>
                   {propertyTypes.filter(t => t !== 'all').map(type => (
@@ -194,13 +205,14 @@ export default function Home() {
 
               {/* Кількість гостей */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Кількість гостей
                 </label>
                 <select
                   value={selectedGuests}
                   onChange={(e) => setSelectedGuests(parseInt(e.target.value))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full px-4 py-2 border border-[var(--border-color)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--bg-primary)]"
+                  style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
                     <option key={num} value={num}>
@@ -246,11 +258,12 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProperties.map((property) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+            {filteredProperties.map((property, index) => (
               <div
                 key={property.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group"
+                className="bg-[var(--bg-tertiary)] rounded-lg shadow-md overflow-hidden hover-lift cursor-pointer group border border-[var(--border-color)]"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="relative">
                   {property.images && property.images.length > 0 ? (
@@ -270,37 +283,37 @@ export default function Home() {
                     </div>
                   )}
 
-                  <div className="absolute bottom-4 left-4 bg-white px-3 py-1 rounded-full text-sm text-gray-700">
+                  <div className="absolute bottom-4 left-4 bg-[var(--bg-primary)] px-3 py-1 rounded-full text-sm border border-[var(--border-color)]" style={{ color: 'var(--text-secondary)' }}>
                     {property.type || 'Будинок'}
                   </div>
                 </div>
 
                 <div className="p-6" onClick={() => window.location.href = `/property/${property.id}`}>
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xl text-gray-900 flex-1">
+                    <h3 className="text-xl flex-1" style={{ color: 'var(--text-primary)' }}>
                       {property.title}
                     </h3>
                     <div className="flex items-center gap-1 ml-2">
                       <span className="text-yellow-500">★</span>
-                      <span className="text-sm text-gray-700">
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                         {(property.rating || 4.8).toFixed(1)}
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                         ({property.reviewCount || 12})
                       </span>
                     </div>
                   </div>
 
-                  <p className="text-gray-600 mb-4 line-clamp-2">
+                  <p className="mb-4 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
                     {property.description}
                   </p>
 
-                  <div className="flex items-center gap-2 text-gray-600 mb-4">
+                  <div className="flex items-center gap-2 mb-4" style={{ color: 'var(--text-secondary)' }}>
                     <MapPin className="w-4 h-4" />
                     <span className="text-sm">{property.location}</span>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                  <div className="flex items-center justify-between text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                     <div className="flex gap-4">
                       <span>{property.bedrooms || 2} спальні</span>
                       <span>{property.bathrooms || 1} ванні</span>
@@ -308,10 +321,10 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between pt-4" style={{ borderColor: 'var(--border-color)' }}>
                     <div>
-                      <span className="text-2xl text-gray-900">{property.pricePerNight} ₴</span>
-                      <span className="text-gray-600"> / ніч</span>
+                      <span className="text-2xl" style={{ color: 'var(--text-primary)' }}>{property.pricePerNight} ₴</span>
+                      <span style={{ color: 'var(--text-secondary)' }}> / ніч</span>
                     </div>
                   </div>
                 </div>
