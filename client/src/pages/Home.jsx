@@ -1,14 +1,32 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, MapPin } from 'lucide-react'
+import { Search, MapPin, Heart } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
-import LocationAutocomplete from '../components/LocationAutocomplete'
+
+const popularLocations = [
+  'Київ',
+  'Львів',
+  'Одеса',
+  'Харків',
+  'Дніпро',
+  'Карпати',
+  'Яремче',
+  'Буковель',
+  'Івано-Франківськ',
+  'Тернопіль'
+]
 
 export default function Home() {
+  const { user } = useAuth()
   const [searchLocation, setSearchLocation] = useState('')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedType, setSelectedType] = useState('all')
+  const [selectedGuests, setSelectedGuests] = useState(1)
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['properties', searchLocation, minPrice, maxPrice],
@@ -25,51 +43,191 @@ export default function Home() {
 
   const properties = data || []
 
+  const locationSuggestions = useMemo(() => {
+    if (!searchLocation) return []
+    return popularLocations.filter(loc =>
+      loc.toLowerCase().includes(searchLocation.toLowerCase())
+    )
+  }, [searchLocation])
+
+  const filteredProperties = useMemo(() => {
+    let filtered = properties
+
+    // Фільтр за локацією
+    if (searchLocation) {
+      filtered = filtered.filter(p =>
+        p.location.toLowerCase().includes(searchLocation.toLowerCase())
+      )
+    }
+
+    // Фільтр за ціною
+    if (minPrice) {
+      filtered = filtered.filter(p => p.pricePerNight >= parseInt(minPrice))
+    }
+    if (maxPrice) {
+      filtered = filtered.filter(p => p.pricePerNight <= parseInt(maxPrice))
+    }
+
+    // Фільтр за типом (якщо є)
+    if (selectedType !== 'all') {
+      filtered = filtered.filter(p => p.type === selectedType)
+    }
+
+    // Фільтр за кількістю гостей
+    filtered = filtered.filter(p => (p.maxGuests || 4) >= selectedGuests)
+
+    return filtered
+  }, [properties, searchLocation, minPrice, maxPrice, selectedType, selectedGuests])
+
+  const propertyTypes = useMemo(() => {
+    const types = new Set(properties.map(p => p.type || 'Будинок'))
+    return ['all', ...Array.from(types)]
+  }, [properties])
+
   return (
     <div>
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Знайдіть ідеальне житло для оренди
-          </h1>
-          <p className="text-xl mb-8">
-            Відкрийте для себе найкращі пропозиції оренди житла
-          </p>
+      {/* Hero секція */}
+      <section className="bg-gradient-to-r from-blue-600 to-blue-900 text-white py-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <h1 className="text-5xl mb-6">Знайдіть ідеальне житло для оренди</h1>
+            <p className="text-xl opacity-90">
+              Тисячі перевірених варіантів житла в Україні та за кордоном.
+              Бронюйте безпечно та зручно.
+            </p>
+          </div>
 
-          {/* Search Bar */}
-          <div className="bg-white rounded-lg shadow-lg p-4 flex flex-col md:flex-row gap-4">
-            <LocationAutocomplete
-              value={searchLocation}
-              onChange={setSearchLocation}
-              placeholder="Місцезнаходження"
-            />
-            <div className="flex gap-4">
-              <input
-                type="number"
-                placeholder="Мін. ціна"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                className="w-32 px-3 py-2 border border-gray-300 rounded outline-none text-gray-800"
-              />
-              <input
-                type="number"
-                placeholder="Макс. ціна"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                className="w-32 px-3 py-2 border border-gray-300 rounded outline-none text-gray-800"
-              />
+          {/* Пошукова панель */}
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+              {/* Місцезнаходження */}
+              <div className="relative lg:col-span-2">
+                <label className="block text-sm text-gray-700 mb-2">
+                  Місцезнаходження
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchLocation}
+                    onChange={(e) => setSearchLocation(e.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    placeholder="Куди плануєте поїхати?"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+                {showSuggestions && locationSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-60 overflow-y-auto">
+                    {locationSuggestions.map((loc, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setSearchLocation(loc)
+                          setShowSuggestions(false)
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-gray-700 transition-colors"
+                      >
+                        <MapPin className="inline w-4 h-4 mr-2 text-gray-400" />
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Мінімальна ціна */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">
+                  Від (₴)
+                </label>
+                <input
+                  type="number"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  placeholder="500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+
+              {/* Максимальна ціна */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">
+                  До (₴)
+                </label>
+                <input
+                  type="number"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  placeholder="3000"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+
+              {/* Кнопка пошуку */}
+              <div className="flex items-end">
+                <button className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Пошук
+                </button>
+              </div>
             </div>
-            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2">
-              <Search className="h-5 w-5" />
-              <span>Пошук</span>
-            </button>
+
+            {/* Додаткові фільтри */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+              {/* Тип житла */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">
+                  Тип житла
+                </label>
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                >
+                  <option value="all">Всі типи</option>
+                  {propertyTypes.filter(t => t !== 'all').map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Кількість гостей */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">
+                  Кількість гостей
+                </label>
+                <select
+                  value={selectedGuests}
+                  onChange={(e) => setSelectedGuests(parseInt(e.target.value))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                    <option key={num} value={num}>
+                      {num} {num === 1 ? 'гість' : num < 5 ? 'гостя' : 'гостей'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Порожнє місце або інші фільтри */}
+              <div></div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Properties Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Сітка нерухомості */}
+      <section className="max-w-7xl mx-auto px-4 py-12">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl text-gray-900">
+            Доступне житло
+          </h2>
+          <p className="text-gray-600">
+            Знайдено {filteredProperties.length} {filteredProperties.length === 1 ? 'варіант' : filteredProperties.length < 5 ? 'варіанти' : 'варіантів'}
+          </p>
+        </div>
+
         {isLoading ? (
           <div className="text-center py-12">
             <div className="text-lg">Завантаження...</div>
@@ -78,55 +236,90 @@ export default function Home() {
           <div className="text-center py-12 text-red-600">
             Помилка завантаження нерухомості
           </div>
-        ) : properties.length === 0 ? (
+        ) : filteredProperties.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-lg text-gray-600">
-              Нерухомість не знайдена
-            </div>
+            <p className="text-xl text-gray-600">
+              На жаль, нічого не знайдено за вашими критеріями
+            </p>
+            <p className="text-gray-500 mt-2">
+              Спробуйте змінити фільтри пошуку
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property) => (
-              <Link
+            {filteredProperties.map((property) => (
+              <div
                 key={property.id}
-                to={`/property/${property.id}`}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group"
               >
-                {property.images && property.images.length > 0 ? (
-                  <img
-                    src={
-                      property.images[0].startsWith('http')
-                        ? property.images[0]
-                        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${property.images[0]}`
-                    }
-                    alt={property.title}
-                    className="w-full h-48 object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-400">Немає зображення</span>
-                  </div>
-                )}
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold mb-2">{property.title}</h3>
-                  <p className="text-gray-600 mb-2 line-clamp-2">
-                    {property.description}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500 text-sm">
-                      <MapPin className="h-4 w-4 inline mr-1" />
-                      {property.location}
-                    </span>
-                    <span className="text-blue-600 font-bold text-lg">
-                      {property.pricePerNight} ₴/ніч
-                    </span>
+                <div className="relative">
+                  {property.images && property.images.length > 0 ? (
+                    <img
+                      src={
+                        property.images[0].startsWith('http')
+                          ? property.images[0]
+                          : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${property.images[0]}`
+                      }
+                      alt={property.title}
+                      className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                      onClick={() => window.location.href = `/property/${property.id}`}
+                    />
+                  ) : (
+                    <div className="w-full h-64 bg-gray-200 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                      <span className="text-gray-400">Немає зображення</span>
+                    </div>
+                  )}
+
+                  <div className="absolute bottom-4 left-4 bg-white px-3 py-1 rounded-full text-sm text-gray-700">
+                    {property.type || 'Будинок'}
                   </div>
                 </div>
-              </Link>
+
+                <div className="p-6" onClick={() => window.location.href = `/property/${property.id}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-xl text-gray-900 flex-1">
+                      {property.title}
+                    </h3>
+                    <div className="flex items-center gap-1 ml-2">
+                      <span className="text-yellow-500">★</span>
+                      <span className="text-sm text-gray-700">
+                        {(property.rating || 4.8).toFixed(1)}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        ({property.reviewCount || 12})
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-600 mb-4 line-clamp-2">
+                    {property.description}
+                  </p>
+
+                  <div className="flex items-center gap-2 text-gray-600 mb-4">
+                    <MapPin className="w-4 h-4" />
+                    <span className="text-sm">{property.location}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                    <div className="flex gap-4">
+                      <span>{property.bedrooms || 2} спальні</span>
+                      <span>{property.bathrooms || 1} ванні</span>
+                      <span>до {property.maxGuests || 4} гостей</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <div>
+                      <span className="text-2xl text-gray-900">{property.pricePerNight} ₴</span>
+                      <span className="text-gray-600"> / ніч</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }

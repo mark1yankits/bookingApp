@@ -1,9 +1,31 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Calendar, Home, Plus, DollarSign, CheckCircle, XCircle, Clock, Eye, MessageCircle, Upload, X, Image } from 'lucide-react'
+import { Calendar, Home, Plus, DollarSign, CheckCircle, XCircle, Clock, Eye, MessageCircle, Upload, X, Image, MapPin, Check, Trash2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
 import { Link } from 'react-router-dom'
+
+const countries = [
+  'Україна',
+  'Іспанія',
+  'Франція',
+  'Італія',
+  'Португалія',
+  'Греція',
+  'Туреччина',
+  'Хорватія',
+  'Польща',
+  'Чехія'
+]
+
+const propertyTypes = [
+  'Квартира',
+  'Будинок',
+  'Апартаменти',
+  'Студія',
+  'Вілла',
+  'Котедж'
+]
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -12,14 +34,20 @@ export default function Dashboard() {
   const [propertyForm, setPropertyForm] = useState({
     title: '',
     description: '',
-    pricePerNight: '',
+    price: '',
     location: '',
+    country: 'Україна',
+    type: 'Квартира',
+    bedrooms: '1',
+    bathrooms: '1',
+    maxGuests: '2',
+    checkInTime: '14:00',
+    checkOutTime: '12:00',
     amenities: '',
-    country: '',
+    rules: '',
+    images: []
   })
-  const [images, setImages] = useState([])
-  const [imagePreviews, setImagePreviews] = useState([])
-  const [isDragOver, setIsDragOver] = useState(false)
+  const [dragActive, setDragActive] = useState(false)
 
   // Fetch user's bookings
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
@@ -56,10 +84,16 @@ export default function Dashboard() {
       const data = new FormData()
       Object.keys(formData).forEach((key) => {
         if (key !== 'images') {
+          if (key === 'amenities') {
+            data.append(key, JSON.stringify(formData[key].split(',').map(a => a.trim()).filter(a => a)))
+          } else if (key === 'rules') {
+            data.append(key, JSON.stringify(formData[key].split('\n').map(r => r.trim()).filter(r => r)))
+          } else {
           data.append(key, formData[key])
+          }
         }
       })
-      images.forEach((image) => {
+      formData.images.forEach((image) => {
         data.append('images', image)
       })
       const response = await api.post('/properties', data, {
@@ -76,15 +110,19 @@ export default function Dashboard() {
       setPropertyForm({
         title: '',
         description: '',
-        pricePerNight: '',
+        price: '',
         location: '',
+        country: 'Україна',
+        type: 'Квартира',
+        bedrooms: '1',
+        bathrooms: '1',
+        maxGuests: '2',
+        checkInTime: '14:00',
+        checkOutTime: '12:00',
         amenities: '',
-        country: '',
+        rules: '',
+        images: []
       })
-      // Clear images and revoke URLs to prevent memory leaks
-      imagePreviews.forEach(url => URL.revokeObjectURL(url))
-      setImages([])
-      setImagePreviews([])
       alert('Нерухомість успішно додано!')
     },
     onError: (error) => {
@@ -105,59 +143,80 @@ export default function Dashboard() {
 
   const handlePropertySubmit = (e) => {
     e.preventDefault()
-    const amenitiesArray = propertyForm.amenities
-      .split(',')
-      .map((a) => a.trim())
-      .filter((a) => a)
-    propertyMutation.mutate({
-      ...propertyForm,
-      amenities: JSON.stringify(amenitiesArray),
-    })
-  }
 
-  const handleImageSelect = (files) => {
-    const newFiles = Array.from(files)
-    const validFiles = newFiles.filter(file => file.type.startsWith('image/'))
-
-    if (validFiles.length !== newFiles.length) {
-      alert('Будь ласка, оберіть тільки зображення')
+    if (!propertyForm.title || !propertyForm.description || !propertyForm.price || !propertyForm.location) {
+      alert('Будь ласка, заповніть всі обов\'язкові поля')
       return
     }
 
-    setImages(prev => [...prev, ...validFiles])
+    if (propertyForm.images.length === 0) {
+      alert('Додайте хоча б одне зображення')
+      return
+    }
 
-    // Create preview URLs
-    const newPreviews = validFiles.map(file => URL.createObjectURL(file))
-    setImagePreviews(prev => [...prev, ...newPreviews])
+    propertyMutation.mutate(propertyForm)
   }
 
-  const handleImageRemove = (index) => {
-    setImages(prev => prev.filter((_, i) => i !== index))
-    setImagePreviews(prev => {
-      // Revoke the URL to prevent memory leaks
-      URL.revokeObjectURL(prev[index])
-      return prev.filter((_, i) => i !== index)
-    })
-  }
-
-  const handleDragOver = (e) => {
+  const handleDrag = (e) => {
     e.preventDefault()
-    setIsDragOver(true)
-  }
-
-  const handleDragLeave = (e) => {
-    e.preventDefault()
-    setIsDragOver(false)
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
   }
 
   const handleDrop = (e) => {
     e.preventDefault()
-    setIsDragOver(false)
-    const files = e.dataTransfer.files
-    if (files.length > 0) {
-      handleImageSelect(files)
+    e.stopPropagation()
+    setDragActive(false)
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFiles(e.dataTransfer.files)
     }
   }
+
+  const handleFileInput = (e) => {
+    if (e.target.files) {
+      handleFiles(e.target.files)
+    }
+  }
+
+  const handleFiles = (files) => {
+    const fileArray = Array.from(files)
+
+    fileArray.forEach(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`Файл ${file.name} занадто великий. Максимальний розмір 10MB`)
+        return
+      }
+
+      if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+        alert(`Файл ${file.name} має неприпустимий формат. Дозволені: PNG, JPG, JPEG`)
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setPropertyForm(prev => ({
+            ...prev,
+            images: [...prev.images, e.target.result]
+          }))
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeImage = (index) => {
+    setPropertyForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }))
+  }
+
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -200,211 +259,262 @@ export default function Dashboard() {
           </div>
 
           {showPropertyForm && (
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <form onSubmit={handlePropertySubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Назва
+            <form onSubmit={handlePropertySubmit} className="mb-8 p-6 bg-gray-50 rounded-lg">
+              <h3 className="text-xl text-gray-900 mb-4">Нова нерухомість</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Назва *
                   </label>
                   <input
                     type="text"
                     value={propertyForm.title}
-                    onChange={(e) =>
-                      setPropertyForm({ ...propertyForm, title: e.target.value })
-                    }
+                    onChange={(e) => setPropertyForm({ ...propertyForm, title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="Сучасна квартира в центрі міста"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Опис
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Опис *
                   </label>
                   <textarea
                     value={propertyForm.description}
-                    onChange={(e) =>
-                      setPropertyForm({
-                        ...propertyForm,
-                        description: e.target.value,
-                      })
-                    }
-                    required
+                    onChange={(e) => setPropertyForm({ ...propertyForm, description: e.target.value })}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="Детальний опис вашої нерухомості..."
+                    required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ціна за ніч (₴)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={propertyForm.pricePerNight}
-                      onChange={(e) =>
-                        setPropertyForm({
-                          ...propertyForm,
-                          pricePerNight: e.target.value,
-                        })
-                      }
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Місцезнаходження
-                    </label>
-                    <input
-                      type="text"
-                      value={propertyForm.location}
-                      onChange={(e) =>
-                        setPropertyForm({
-                          ...propertyForm,
-                          location: e.target.value,
-                        })
-                      }
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Країна
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Тип житла *
+                  </label>
+                  <select
+                    value={propertyForm.type}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, type: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    {propertyTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Ціна за ніч (₴) *
+                  </label>
+                  <input
+                    type="number"
+                    value={propertyForm.price}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, price: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="1200"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Місцезнаходження *
+                  </label>
+                  <input
+                    type="text"
+                    value={propertyForm.location}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, location: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="Київ, Шевченківський район"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Країна *
                   </label>
                   <select
                     value={propertyForm.country}
-                    onChange={(e) =>
-                      setPropertyForm({
-                        ...propertyForm,
-                        country: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setPropertyForm({ ...propertyForm, country: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   >
-                    <option value="">Оберіть країну</option>
-                    <option value="Україна">Україна</option>
-                    <option value="Іспанія">Іспанія</option>
-                    <option value="Франція">Франція</option>
-                    <option value="Італія">Італія</option>
-                    <option value="Португалія">Португалія</option>
-                    <option value="Греція">Греція</option>
-                    <option value="Туреччина">Туреччина</option>
-                    <option value="Хорватія">Хорватія</option>
-                    <option value="Польща">Польща</option>
-                    <option value="Чехія">Чехія</option>
+                    {countries.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
                   </select>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Кількість спалень *
+                  </label>
+                  <select
+                    value={propertyForm.bedrooms}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, bedrooms: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Кількість ванних *
+                  </label>
+                  <select
+                    value={propertyForm.bathrooms}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, bathrooms: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    {[1, 2, 3, 4].map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Максимум гостей *
+                  </label>
+                  <select
+                    value={propertyForm.maxGuests}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, maxGuests: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Час заїзду *
+                  </label>
+                  <input
+                    type="time"
+                    value={propertyForm.checkInTime}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, checkInTime: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Час виїзду *
+                  </label>
+                  <input
+                    type="time"
+                    value={propertyForm.checkOutTime}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, checkOutTime: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-gray-700 mb-2">
                     Зручності (через кому)
                   </label>
                   <input
                     type="text"
                     value={propertyForm.amenities}
-                    onChange={(e) =>
-                      setPropertyForm({
-                        ...propertyForm,
-                        amenities: e.target.value,
-                      })
-                    }
-                    placeholder="Wi-Fi, Парковка, Кондиціонер"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setPropertyForm({ ...propertyForm, amenities: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="Wi-Fi, Парковка, Кондиціонер, Кухня"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Зображення
-                  </label>
 
-                  {/* Drag & Drop Area */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Правила дому (кожне правило з нового рядка)
+                  </label>
+                  <textarea
+                    value={propertyForm.rules}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, rules: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="Заборонено курити&#10;Домашні тварини не дозволені&#10;Тихі години: 22:00-08:00"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Зображення *
+                  </label>
                   <div
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
                     onDrop={handleDrop}
-                    className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
-                      isDragOver
-                        ? 'border-blue-400 bg-blue-50'
-                        : 'border-gray-300 hover:border-gray-400'
+                    className={`border-2 border-dashed rounded-lg p-8 text-center ${
+                      dragActive ? 'border-blue-600 bg-blue-50' : 'border-gray-300'
                     }`}
                   >
-                    <div className="text-center">
-                      <Upload className={`mx-auto h-12 w-12 ${
-                        isDragOver ? 'text-blue-500' : 'text-gray-400'
-                      }`} />
-                      <div className="mt-4">
-                        <label htmlFor="image-upload" className="cursor-pointer">
-                          <span className="mt-2 block text-sm font-medium text-gray-900">
-                            Перетягніть зображення сюди або{' '}
-                            <span className="text-blue-600 hover:text-blue-500">
-                              оберіть файли
-                            </span>
-                          </span>
-                        </label>
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">
+                      Перетягніть файли сюди або{' '}
+                      <label className="text-blue-600 hover:text-blue-700 cursor-pointer">
+                        оберіть файли
                         <input
-                          id="image-upload"
                           type="file"
                           multiple
-                          accept="image/*"
-                          onChange={(e) => handleImageSelect(e.target.files)}
-                          className="sr-only"
+                          accept="image/png,image/jpeg,image/jpg"
+                          onChange={handleFileInput}
+                          className="hidden"
                         />
-                      </div>
-                      <p className="mt-1 text-xs text-gray-500">
-                        PNG, JPG, JPEG до 10MB кожен
-                      </p>
-                    </div>
+                      </label>
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      PNG, JPG до 10MB на файл
+                    </p>
                   </div>
 
-                  {/* Image Previews */}
-                  {imagePreviews.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">
-                        Вибрані зображення ({imagePreviews.length})
-                      </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {imagePreviews.map((preview, index) => (
-                          <div key={index} className="relative group">
-                            <div className="aspect-square rounded-lg overflow-hidden border border-gray-200">
-                              <img
-                                src={preview}
-                                alt={`Preview ${index + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleImageRemove(index)}
-                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                  {propertyForm.images.length > 0 && (
+                    <div className="grid grid-cols-4 gap-4 mt-4">
+                      {propertyForm.images.map((image, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={image}
+                            alt={`Фото ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-                <div className="flex space-x-4">
-                  <button
-                    type="submit"
-                    disabled={propertyMutation.isPending}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {propertyMutation.isPending ? 'Збереження...' : 'Додати'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPropertyForm(false)}
-                    className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400"
-                  >
-                    Скасувати
-                  </button>
-                </div>
-              </form>
-            </div>
+              </div>
+
+              <div className="flex gap-4 mt-6">
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Додати нерухомість
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPropertyForm(false)}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Скасувати
+                </button>
+              </div>
+            </form>
           )}
 
           {/* My Properties */}
