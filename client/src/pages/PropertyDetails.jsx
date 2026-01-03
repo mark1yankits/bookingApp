@@ -721,7 +721,12 @@ export default function PropertyDetails() {
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                <span>{(property.rating || 4.8).toFixed(1)} ({property.reviewCount || 12} відгуків)</span>
+                <span>
+                  {reviewsData && reviewsData.length > 0
+                    ? (reviewsData.reduce((sum, r) => sum + r.rating, 0) / reviewsData.length).toFixed(1)
+                    : (property.rating || 0).toFixed(1)
+                  } ({reviewsData ? reviewsData.length : property.reviewCount || 0} відгуків)
+                </span>
               </div>
             </div>
 
