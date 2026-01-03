@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path'; 
 import { body, validationResult, query } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, requireRole } from '../middleware/auth.js';
@@ -145,12 +146,26 @@ router.post(
 
       // Upload images
       const imageUrls = [];
-      if (req.files && req.files.length > 0) {
-        for (const file of req.files) {
-          const url = await uploadFile(file.buffer, file.originalname, file.mimetype);
-          imageUrls.push(url);
-        }
-      }
+if (req.files && req.files.length > 0) {
+  for (const file of req.files) {
+    let url;
+    
+    // Якщо використовується S3, URL вже в file.location
+    if (file.location) {
+      url = file.location;
+    } else if (file.buffer) {
+      // Якщо локальне зберігання, завантажуємо через uploadFile
+      url = await uploadFile(file.buffer, file.originalname, file.mimetype);
+    } else if (file.path) {
+      // Якщо файл вже збережений локально
+      url = `/uploads/${path.basename(file.path)}`;
+    } else {
+      throw new Error('Unable to get file URL - check storage configuration');
+    }
+    
+    imageUrls.push(url);
+  }
+}
 
       // Create property
       const property = await prisma.property.create({

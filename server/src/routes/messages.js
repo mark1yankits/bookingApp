@@ -6,7 +6,6 @@ import { authenticate } from '../middleware/auth.js';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Get messages for a property
 router.get('/property/:propertyId', authenticate, async (req, res, next) => {
   try {
     const { propertyId } = req.params;
@@ -28,16 +27,6 @@ router.get('/property/:propertyId', authenticate, async (req, res, next) => {
       });
     }
 
-    // Check if user is host or has a booking
-    const isHost = property.hostId === userId;
-    const hasBooking = property.bookings.length > 0;
-
-    if (!isHost && !hasBooking) {
-      return res.status(403).json({
-        error: 'Forbidden',
-        message: 'You do not have access to this conversation',
-      });
-    }
 
     const messages = await prisma.message.findMany({
       where: { propertyId },
@@ -68,7 +57,6 @@ router.get('/property/:propertyId', authenticate, async (req, res, next) => {
   }
 });
 
-// Send a message
 router.post(
   '/',
   authenticate,
@@ -99,20 +87,39 @@ router.post(
         });
       }
 
-      // Verify receiver is either host or has a booking
       const isHost = property.hostId === receiverId;
-      const booking = await prisma.booking.findFirst({
-        where: {
-          propertyId,
-          userId: receiverId,
-        },
-      });
+      const isSenderHost = property.hostId === senderId;
 
-      if (!isHost && !booking) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Invalid receiver',
+      if (isSenderHost) {
+        // Host sending - receiver must be a guest who has messaged or booked
+        const hasMessage = await prisma.message.findFirst({
+          where: {
+            propertyId,
+            senderId: receiverId,
+          },
         });
+
+        const hasBooking = await prisma.booking.findFirst({
+          where: {
+            propertyId,
+            userId: receiverId,
+          },
+        });
+
+        if (!hasMessage && !hasBooking) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            message: 'Can only reply to guests who have messaged or booked',
+          });
+        }
+      } else {
+        // Guest sending - receiver must be the host
+        if (!isHost) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            message: 'Guests can only message property hosts',
+          });
+        }
       }
 
       const message = await prisma.message.create({
