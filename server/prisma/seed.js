@@ -6,13 +6,19 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting seed...');
 
-  // Clear existing data
-  await prisma.booking.deleteMany();
-  await prisma.property.deleteMany();
-  await prisma.user.deleteMany();
+  // Check if data already exists
+  const existingUsers = await prisma.user.count();
 
-  // Create users
-  const hashedPassword = await bcrypt.hash('password123', 10);
+  if (existingUsers === 0) {
+    console.log('📝 База порожня, створюємо тестові дані...');
+
+    // Clear existing data (just in case)
+    await prisma.booking.deleteMany();
+    await prisma.property.deleteMany();
+    await prisma.user.deleteMany();
+
+    // Create users
+    const hashedPassword = await bcrypt.hash('password123', 10);
 
   const guest = await prisma.user.create({
     data: {
@@ -138,11 +144,17 @@ async function main() {
 
   console.log('✅ Created bookings');
 
-  console.log('\n📊 Seed completed successfully!');
-  console.log('\n👤 Test users:');
-  console.log('  Guest: guest@example.com / password123');
-  console.log('  Host:  host@example.com / password123');
-  console.log('  Admin: admin@example.com / password123');
+    console.log('✅ Created bookings');
+
+    console.log('\n📊 Seed completed successfully!');
+    console.log('\n👤 Test users:');
+    console.log('  Guest: guest@example.com / password123');
+    console.log('  Host:  host@example.com / password123');
+    console.log('  Admin: admin@example.com / password123');
+  } else {
+    console.log('✅ Тестові дані вже існують, пропускаємо створення seed');
+    console.log(`📊 Знайдено ${existingUsers} користувачів у базі даних`);
+  }
 }
 
 main()

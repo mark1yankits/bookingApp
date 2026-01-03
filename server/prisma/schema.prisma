@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
@@ -11,53 +8,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  guest
-  host
-  admin
-}
-
-enum BookingStatus {
-  pending
-  confirmed
-  cancelled
-}
-
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  role         UserRole  @default(guest)
-  createdAt    DateTime  @default(now()) @map("created_at")
-  
-  // Relations
-  properties   Property[]
-  bookings     Booking[]
-  sentMessages Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
-  
+  id               String     @id @default(uuid())
+  email            String     @unique
+  passwordHash     String     @map("password_hash")
+  role             UserRole   @default(guest)
+  createdAt        DateTime   @default(now()) @map("created_at")
+  bookings         Booking[]
+  receivedMessages Message[]  @relation("ReceivedMessages")
+  sentMessages     Message[]  @relation("SentMessages")
+  properties       Property[]
+
   @@map("users")
 }
 
 model Property {
-  id            String   @id @default(uuid())
-  hostId        String   @map("host_id")
+  id            String    @id @default(uuid())
+  hostId        String    @map("host_id")
   title         String
-  description   String   @db.Text
-  pricePerNight Float    @map("price_per_night")
+  description   String
+  pricePerNight Float     @map("price_per_night")
   location      String
-  images        String[] @default([])
-  amenities     Json     @default("[]")
-  views         Int      @default(0)
+  images        String[]  @default([])
+  amenities     Json      @default("[]")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
   country       String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  
-  // Relations
-  host          User     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  views         Int       @default(0)
   bookings      Booking[]
   messages      Message[]
-  
+  host          User      @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
   @@map("properties")
 }
 
@@ -71,11 +52,9 @@ model Booking {
   status     BookingStatus @default(pending)
   createdAt  DateTime      @default(now()) @map("created_at")
   updatedAt  DateTime      @updatedAt @map("updated_at")
-  
-  // Relations
   property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@map("bookings")
 }
 
@@ -84,13 +63,23 @@ model Message {
   propertyId String   @map("property_id")
   senderId   String   @map("sender_id")
   receiverId String   @map("receiver_id")
-  content    String   @db.Text
+  content    String
   createdAt  DateTime @default(now()) @map("created_at")
-  
-  // Relations
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
-  
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
   @@map("messages")
+}
+
+enum UserRole {
+  guest
+  host
+  admin
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  cancelled
 }
