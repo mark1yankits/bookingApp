@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Search, MapPin } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import api from '../api/api'
+import LocationAutocomplete from '../components/LocationAutocomplete'
 
 export default function Home() {
   const [searchLocation, setSearchLocation] = useState('')
@@ -38,16 +39,11 @@ export default function Home() {
 
           {/* Search Bar */}
           <div className="bg-white rounded-lg shadow-lg p-4 flex flex-col md:flex-row gap-4">
-            <div className="flex-1 flex items-center space-x-2">
-              <MapPin className="h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Місцезнаходження"
-                value={searchLocation}
-                onChange={(e) => setSearchLocation(e.target.value)}
-                className="flex-1 outline-none text-gray-800"
-              />
-            </div>
+            <LocationAutocomplete
+              value={searchLocation}
+              onChange={setSearchLocation}
+              placeholder="Місцезнаходження"
+            />
             <div className="flex gap-4">
               <input
                 type="number"
