@@ -18,6 +18,7 @@ model User {
   receivedMessages Message[]  @relation("ReceivedMessages")
   sentMessages     Message[]  @relation("SentMessages")
   properties       Property[]
+  reviews          Review[]
 
   @@map("users")
 }
@@ -42,10 +43,10 @@ model Property {
   checkOutTime  String?   @map("check_out_time")
   rules         Json      @default("[]")
   rating        Float?    @default(0)
-  reviewCount   Int?      @default(0) @map("review_count")
   views         Int       @default(0)
   bookings      Booking[]
   messages      Message[]
+  reviews       Review[]
   host          User      @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
   @@map("properties")
@@ -65,6 +66,20 @@ model Booking {
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("bookings")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  propertyId String   @map("property_id")
+  userId     String   @map("user_id")
+  rating     Int      // 1-5 зірочки
+  comment    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
 }
 
 model Message {

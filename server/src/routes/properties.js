@@ -48,13 +48,24 @@ router.get(
               email: true,
             },
           },
+          _count: {
+            select: {
+              reviews: true,
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
         },
       });
 
-      res.json({ properties });
+      // Transform properties to include reviewCount
+      const transformedProperties = properties.map(({ _count, ...prop }) => ({
+        ...prop,
+        reviewCount: _count.reviews,
+      }));
+
+      res.json({ properties: transformedProperties });
     } catch (error) {
       next(error);
     }
@@ -73,6 +84,11 @@ router.get('/:id', async (req, res, next) => {
           select: {
             id: true,
             email: true,
+          },
+        },
+        _count: {
+          select: {
+            reviews: true,
           },
         },
       },
@@ -100,10 +116,19 @@ router.get('/:id', async (req, res, next) => {
             email: true,
           },
         },
+        _count: {
+          select: {
+            reviews: true,
+          },
+        },
       },
     });
 
-    res.json({ property: updatedProperty });
+    // Transform to include reviewCount
+    const { _count, ...transformedProperty } = updatedProperty;
+    transformedProperty.reviewCount = _count.reviews;
+
+    res.json({ property: transformedProperty });
   } catch (error) {
     next(error);
   }
@@ -240,13 +265,24 @@ router.get('/host/my-properties', authenticate, requireRole('host', 'admin'), as
             status: true,
           },
         },
+        _count: {
+          select: {
+            reviews: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    res.json({ properties });
+    // Transform properties to include reviewCount
+    const transformedProperties = properties.map(({ _count, ...prop }) => ({
+      ...prop,
+      reviewCount: _count.reviews,
+    }));
+
+    res.json({ properties: transformedProperties });
   } catch (error) {
     next(error);
   }

@@ -11,6 +11,7 @@ import propertyRoutes from './routes/properties.js';
 import bookingRoutes from './routes/bookings.js';
 import messageRoutes from './routes/messages.js';
 import weatherRoutes from './routes/weather.js';
+import reviewRoutes from './routes/reviews.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -43,6 +44,7 @@ app.use('/properties', propertyRoutes);
 app.use('/bookings', bookingRoutes);
 app.use('/messages', messageRoutes);
 app.use('/weather', weatherRoutes);
+app.use('/reviews', reviewRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

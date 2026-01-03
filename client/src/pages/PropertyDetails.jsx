@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { MapPin, Calendar, DollarSign, Cloud, Thermometer, Droplets, Wind, Eye, ChevronLeft, ChevronRight, Users, Bed, Bath, Clock, Star, Heart, AlertCircle } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { MapPin, Calendar, DollarSign, Cloud, Thermometer, Droplets, Wind, Eye, ChevronLeft, ChevronRight, Users, Bed, Bath, Clock, Star, Heart, AlertCircle, MessageSquare, Send, Edit, Trash2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
 import Chat from '../components/Chat'
@@ -10,12 +10,16 @@ export default function PropertyDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [adults, setAdults] = useState(1)
   const [children, setChildren] = useState(0)
   const [showBookingSuccess, setShowBookingSuccess] = useState(false)
+  const [newReview, setNewReview] = useState({ rating: 5, comment: '' })
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [editingReview, setEditingReview] = useState(null)
 
   const { data: property, isLoading } = useQuery({
     queryKey: ['property', id],
@@ -36,6 +40,16 @@ export default function PropertyDetails() {
     enabled: !!property?.country,
   })
 
+  // Fetch reviews
+  const { data: reviewsData, isLoading: reviewsLoading } = useQuery({
+    queryKey: ['reviews', id],
+    queryFn: async () => {
+      const response = await api.get(`/reviews/property/${id}`)
+      return response.data.reviews
+    },
+    enabled: !!property,
+  })
+
   const bookingMutation = useMutation({
     mutationFn: async (bookingData) => {
       const response = await api.post('/bookings', bookingData)
@@ -51,6 +65,46 @@ export default function PropertyDetails() {
           'Помилка при створенні бронювання'
       )
     },
+  })
+
+  const createReviewMutation = useMutation({
+    mutationFn: async (reviewData) => {
+      const response = await api.post('/reviews', reviewData)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['reviews', id])
+      setNewReview({ rating: 5, comment: '' })
+      setShowReviewForm(false)
+      alert('Відгук успішно додано!')
+    },
+  })
+
+  const updateReviewMutation = useMutation({
+    mutationFn: async ({ reviewId, reviewData }) => {
+      const response = await api.put(`/reviews/${reviewId}`, reviewData)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['reviews', id])
+      setEditingReview(null)
+      alert('Відгук успішно оновлено!')
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || 'Помилка при оновленні відгуку')
+    },
+  })
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: async (reviewId) => {
+      const response = await api.delete(`/reviews/${reviewId}`)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['reviews', id])
+      alert('Відгук успішно видалено!')
+    },
+
   })
 
   const nextImage = () => {
@@ -135,6 +189,47 @@ export default function PropertyDetails() {
     const end = new Date(endDate);
     return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
   };
+
+  const handleCreateReview = (e) => {
+    e.preventDefault()
+    if (!user) {
+      alert('Будь ласка, увійдіть для додавання відгуку')
+      return
+    }
+
+    createReviewMutation.mutate({
+      propertyId: id,
+      rating: newReview.rating,
+      comment: newReview.comment,
+    })
+  }
+
+  const handleUpdateReview = (e) => {
+    e.preventDefault()
+    if (!editingReview) return
+
+    updateReviewMutation.mutate({
+      reviewId: editingReview.id,
+      rating: editingReview.rating,
+      comment: editingReview.comment,
+    })
+  }
+
+  const handleDeleteReview = (reviewId) => {
+    if (confirm('Ви впевнені, що хочете видалити цей відгук?')) {
+      deleteReviewMutation.mutate(reviewId)
+    }
+  }
+
+  const canUserReview = () => {
+    if (!user || !property) return false
+
+    // Allow all logged in users to review properties
+    return true
+  }
+
+  const userReview = reviewsData?.find(review => review.userId === user?.id)
+  const canAddReview = user && !userReview && canUserReview()
 
   const getImageUrl = (imagePath) => {
     return imagePath.startsWith('http')
@@ -269,8 +364,15 @@ export default function PropertyDetails() {
               </div>
               <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg">
                 <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                <span className="text-xl text-gray-900">{(property.rating || 4.8).toFixed(1)}</span>
-                <span className="text-gray-600">({property.reviewCount || 12} відгуків)</span>
+                <span className="text-xl text-gray-900">
+                  {reviewsData && reviewsData.length > 0
+                    ? (reviewsData.reduce((sum, r) => sum + r.rating, 0) / reviewsData.length).toFixed(1)
+                    : (property.rating || 0).toFixed(1)
+                  }
+                </span>
+                <span className="text-gray-600">
+                  ({reviewsData ? reviewsData.length : property.reviewCount || 0} відгуків)
+                </span>
               </div>
             </div>
 
@@ -394,6 +496,219 @@ export default function PropertyDetails() {
               )}
             </div>
           )}
+
+          {/* Reviews Section */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl text-gray-900 flex items-center gap-2">
+                <MessageSquare className="w-6 h-6" />
+                Відгуки
+              </h2>
+              {canAddReview && !showReviewForm && (
+                <button
+                  onClick={() => setShowReviewForm(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Додати відгук
+                </button>
+              )}
+            </div>
+
+            {/* Add Review Form */}
+            {showReviewForm && (
+              <form onSubmit={handleCreateReview} className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-lg text-gray-900 mb-4">Залишити відгук</h3>
+
+                <div className="mb-4">
+                  <label className="block text-sm text-gray-700 mb-2">Оцінка</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setNewReview({ ...newReview, rating: star })}
+                        className="text-2xl focus:outline-none"
+                      >
+                        <Star
+                          className={`w-6 h-6 ${
+                            star <= newReview.rating
+                              ? 'text-yellow-500 fill-yellow-500'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm text-gray-700 mb-2">Коментар</label>
+                  <textarea
+                    value={newReview.comment}
+                    onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="Розкажіть про ваш досвід..."
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={createReviewMutation.isPending}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Send className="w-4 h-4" />
+                    {createReviewMutation.isPending ? 'Надсилання...' : 'Надіслати'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowReviewForm(false)
+                      setNewReview({ rating: 5, comment: '' })
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Скасувати
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Edit Review Form */}
+            {editingReview && (
+              <form onSubmit={handleUpdateReview} className="mb-6 p-4 bg-blue-50 rounded-lg">
+                <h3 className="text-lg text-gray-900 mb-4">Редагувати відгук</h3>
+
+                <div className="mb-4">
+                  <label className="block text-sm text-gray-700 mb-2">Оцінка</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setEditingReview({ ...editingReview, rating: star })}
+                        className="text-2xl focus:outline-none"
+                      >
+                        <Star
+                          className={`w-6 h-6 ${
+                            star <= editingReview.rating
+                              ? 'text-yellow-500 fill-yellow-500'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm text-gray-700 mb-2">Коментар</label>
+                  <textarea
+                    value={editingReview.comment || ''}
+                    onChange={(e) => setEditingReview({ ...editingReview, comment: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="Оновіть ваш коментар..."
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={updateReviewMutation.isPending}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Send className="w-4 h-4" />
+                    {updateReviewMutation.isPending ? 'Оновлення...' : 'Оновити'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingReview(null)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Скасувати
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Reviews List */}
+            {reviewsLoading ? (
+              <div className="text-center py-8">
+                <div className="text-lg">Завантаження відгуків...</div>
+              </div>
+            ) : reviewsData && reviewsData.length > 0 ? (
+              <div className="space-y-4">
+                {reviewsData.map((review) => (
+                  <div key={review.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 font-semibold">
+                            {review.user?.email?.charAt(0).toUpperCase() || '?'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-gray-900 font-medium">
+                            {review.user?.email || 'Користувач'}
+                          </p>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-4 h-4 ${
+                                  star <= review.rating
+                                    ? 'text-yellow-500 fill-yellow-500'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {(user?.id === review.userId || user?.role === 'admin') && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setEditingReview(review)}
+                            className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReview(review.id)}
+                            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {review.comment && (
+                      <p className="text-gray-700 mb-2">{review.comment}</p>
+                    )}
+
+                    <p className="text-sm text-gray-500">
+                      {new Date(review.createdAt).toLocaleDateString('uk-UA')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600">Поки що немає відгуків</p>
+                {canAddReview && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Будьте першим, хто залишить відгук!
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Booking Sidebar */}
