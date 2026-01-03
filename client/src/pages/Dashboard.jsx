@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Calendar, Home, Plus, DollarSign, CheckCircle, XCircle, Clock, Eye, MessageCircle } from 'lucide-react'
+import { Calendar, Home, Plus, DollarSign, CheckCircle, XCircle, Clock, Eye, MessageCircle, Upload, X, Image } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
 import { Link } from 'react-router-dom'
@@ -18,6 +18,8 @@ export default function Dashboard() {
     country: '',
   })
   const [images, setImages] = useState([])
+  const [imagePreviews, setImagePreviews] = useState([])
+  const [isDragOver, setIsDragOver] = useState(false)
 
   // Fetch user's bookings
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
@@ -79,7 +81,10 @@ export default function Dashboard() {
         amenities: '',
         country: '',
       })
+      // Clear images and revoke URLs to prevent memory leaks
+      imagePreviews.forEach(url => URL.revokeObjectURL(url))
       setImages([])
+      setImagePreviews([])
       alert('Нерухомість успішно додано!')
     },
     onError: (error) => {
@@ -108,6 +113,50 @@ export default function Dashboard() {
       ...propertyForm,
       amenities: JSON.stringify(amenitiesArray),
     })
+  }
+
+  const handleImageSelect = (files) => {
+    const newFiles = Array.from(files)
+    const validFiles = newFiles.filter(file => file.type.startsWith('image/'))
+
+    if (validFiles.length !== newFiles.length) {
+      alert('Будь ласка, оберіть тільки зображення')
+      return
+    }
+
+    setImages(prev => [...prev, ...validFiles])
+
+    // Create preview URLs
+    const newPreviews = validFiles.map(file => URL.createObjectURL(file))
+    setImagePreviews(prev => [...prev, ...newPreviews])
+  }
+
+  const handleImageRemove = (index) => {
+    setImages(prev => prev.filter((_, i) => i !== index))
+    setImagePreviews(prev => {
+      // Revoke the URL to prevent memory leaks
+      URL.revokeObjectURL(prev[index])
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      handleImageSelect(files)
+    }
   }
 
   const getStatusIcon = (status) => {
@@ -266,16 +315,77 @@ export default function Dashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
                     Зображення
                   </label>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => setImages(Array.from(e.target.files))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+
+                  {/* Drag & Drop Area */}
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
+                      isDragOver
+                        ? 'border-blue-400 bg-blue-50'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <Upload className={`mx-auto h-12 w-12 ${
+                        isDragOver ? 'text-blue-500' : 'text-gray-400'
+                      }`} />
+                      <div className="mt-4">
+                        <label htmlFor="image-upload" className="cursor-pointer">
+                          <span className="mt-2 block text-sm font-medium text-gray-900">
+                            Перетягніть зображення сюди або{' '}
+                            <span className="text-blue-600 hover:text-blue-500">
+                              оберіть файли
+                            </span>
+                          </span>
+                        </label>
+                        <input
+                          id="image-upload"
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => handleImageSelect(e.target.files)}
+                          className="sr-only"
+                        />
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        PNG, JPG, JPEG до 10MB кожен
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Image Previews */}
+                  {imagePreviews.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        Вибрані зображення ({imagePreviews.length})
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {imagePreviews.map((preview, index) => (
+                          <div key={index} className="relative group">
+                            <div className="aspect-square rounded-lg overflow-hidden border border-gray-200">
+                              <img
+                                src={preview}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleImageRemove(index)}
+                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex space-x-4">
                   <button

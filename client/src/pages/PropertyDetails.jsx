@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { MapPin, Calendar, DollarSign, Cloud, Thermometer, Droplets, Wind, Eye } from 'lucide-react'
+import { MapPin, Calendar, DollarSign, Cloud, Thermometer, Droplets, Wind, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
 import Chat from '../components/Chat'
@@ -12,6 +12,7 @@ export default function PropertyDetails() {
   const { user } = useAuth()
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
   const { data: property, isLoading } = useQuery({
     queryKey: ['property', id],
@@ -88,8 +89,47 @@ export default function PropertyDetails() {
     ? property.amenities
     : []
 
+  const getImageUrl = (imagePath) => {
+    return imagePath.startsWith('http')
+      ? imagePath
+      : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${imagePath}`
+  }
+
+  const nextImage = () => {
+    if (property.images && property.images.length > 1) {
+      setSelectedImageIndex((prev) =>
+        prev === property.images.length - 1 ? 0 : prev + 1
+      )
+    }
+  }
+
+  const prevImage = () => {
+    if (property.images && property.images.length > 1) {
+      setSelectedImageIndex((prev) =>
+        prev === 0 ? property.images.length - 1 : prev - 1
+      )
+    }
+  }
+
+  // Keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!property.images || property.images.length <= 1) return
+
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      prevImage()
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      nextImage()
+    }
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+    >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2">
@@ -109,15 +149,65 @@ export default function PropertyDetails() {
           {/* Image Gallery */}
           {property.images && property.images.length > 0 ? (
             <div className="mb-6">
-              <img
-                src={
-                  property.images[0].startsWith('http')
-                    ? property.images[0]
-                    : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${property.images[0]}`
-                }
-                alt={property.title}
-                className="w-full h-96 object-cover rounded-lg"
-              />
+              {/* Main Image */}
+              <div className="relative mb-4">
+                <img
+                  src={getImageUrl(property.images[selectedImageIndex])}
+                  alt={`${property.title} - зображення ${selectedImageIndex + 1}`}
+                  className="w-full h-96 object-cover rounded-lg shadow-lg"
+                />
+
+                {/* Navigation Arrows */}
+                {property.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition-all hover:scale-110"
+                      aria-label="Попереднє зображення"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition-all hover:scale-110"
+                      aria-label="Наступне зображення"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Thumbnails */}
+              {property.images.length > 1 && (
+                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                  {property.images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImageIndex(index)}
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                        selectedImageIndex === index
+                          ? 'border-blue-500 ring-2 ring-blue-200'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <img
+                        src={getImageUrl(image)}
+                        alt={`${property.title} - мініатюра ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {selectedImageIndex === index && (
+                        <div className="absolute inset-0 bg-blue-500 bg-opacity-20"></div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Image Counter */}
+              <div className="mt-2 text-sm text-gray-600 text-center">
+                {selectedImageIndex + 1} з {property.images.length}
+              </div>
             </div>
           ) : (
             <div className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center mb-6">
