@@ -42,13 +42,6 @@ model Property {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   country       String?
-  type          String?
-  bedrooms      Int?
-  bathrooms     Int?
-  maxGuests     Int?      @map("max_guests")
-  checkInTime   String?   @map("check_in_time")
-  checkOutTime  String?   @map("check_out_time")
-  rules         Json      @default("[]")
   rating        Float?    @default(0)
   views         Int       @default(0)
   bookings      Booking[]
