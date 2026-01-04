@@ -154,5 +154,90 @@ router.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
+// Update profile
+router.patch(
+  '/profile',
+  authenticate,
+  [
+    body('email').optional().isEmail().withMessage('Valid email is required'),
+    body('currentPassword').optional().isLength({ min: 6 }).withMessage('Current password must be at least 6 characters'),
+    body('newPassword').optional().isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+  ],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { email, currentPassword, newPassword } = req.body;
+      const updateData = {};
+
+      // If email is being updated, check if it's not taken by another user
+      if (email && email !== req.user.email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (existingUser && existingUser.id !== req.user.id) {
+          return res.status(409).json({
+            error: 'Conflict',
+            message: 'Email is already taken by another user',
+          });
+        }
+
+        updateData.email = email;
+      }
+
+      // If password is being updated, verify current password
+      if (newPassword) {
+        if (!currentPassword) {
+          return res.status(400).json({
+            error: 'Bad Request',
+            message: 'Current password is required to change password',
+          });
+        }
+
+        // Get current user with password hash
+        const user = await prisma.user.findUnique({
+          where: { id: req.user.id },
+        });
+
+        // Verify current password
+        const isValidPassword = await bcrypt.compare(currentPassword, user.passwordHash);
+
+        if (!isValidPassword) {
+          return res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Current password is incorrect',
+          });
+        }
+
+        // Hash new password
+        updateData.passwordHash = await bcrypt.hash(newPassword, 10);
+      }
+
+      // Update user
+      const updatedUser = await prisma.user.update({
+        where: { id: req.user.id },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          createdAt: true,
+        },
+      });
+
+      res.json({
+        message: 'Profile updated successfully',
+        user: updatedUser,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;
 

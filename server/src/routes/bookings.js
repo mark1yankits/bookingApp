@@ -193,6 +193,104 @@ router.get('/host-bookings', authenticate, requireRole('host', 'admin'), async (
   }
 });
 
+// Cancel booking (User can cancel their own booking)
+router.patch('/:id/cancel', authenticate, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    // Check if booking exists and belongs to user
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        property: {
+          include: {
+            host: {
+              select: {
+                id: true,
+                email: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'Booking not found',
+      });
+    }
+
+    // Verify user owns the booking (unless admin)
+    if (req.user.role !== 'admin' && booking.userId !== req.user.id) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You can only cancel your own bookings',
+      });
+    }
+
+    // Check if booking can be cancelled (not already cancelled or completed)
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'Booking is already cancelled',
+      });
+    }
+
+    // Update booking status to cancelled
+    const updatedBooking = await prisma.booking.update({
+      where: { id },
+      data: { status: 'cancelled' },
+      include: {
+        property: {
+          include: {
+            host: {
+              select: {
+                id: true,
+                email: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Create cancellation message for host
+    await prisma.message.create({
+      data: {
+        senderId: req.user.id,
+        receiverId: booking.property.host.id,
+        propertyId: booking.propertyId,
+        bookingId: booking.id,
+        type: 'cancellation',
+        content: reason || 'Бронювання скасовано користувачем',
+        isRead: false,
+      },
+    });
+
+    res.json({
+      message: 'Booking cancelled successfully',
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Update booking status (Host/Admin only)
 router.patch(
   '/:id/status',
@@ -259,6 +357,8 @@ router.patch(
           },
         },
       });
+
+      // TODO: Create status update message for user (when Message model is updated)
 
       res.json({
         message: 'Booking status updated',

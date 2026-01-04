@@ -6,6 +6,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345
       POSTGRES_DB: booking_db
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     ports:
       - "5432:5432"
     volumes:
@@ -13,7 +14,7 @@ services:
     networks:
       - booking-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U booking_user"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,7 +28,8 @@ services:
       - ./server/.env
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://postgres:12345@host.docker.internal:5432/booking_db
+      # DATABASE_URL from environment takes precedence over env_file
+      DATABASE_URL: postgresql://postgres:12345@postgres:5432/booking_db
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       PORT: 5000
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}

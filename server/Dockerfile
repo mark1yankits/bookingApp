@@ -2,8 +2,8 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install OpenSSL and libraries for Prisma
-RUN apk add --no-cache openssl libc6-compat
+# Install OpenSSL and libraries for Prisma, plus postgresql-client for health checks
+RUN apk add --no-cache openssl libc6-compat postgresql-client
 
 # Copy package files
 COPY package*.json ./

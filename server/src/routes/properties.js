@@ -144,13 +144,25 @@ router.post(
   [
     body('title').notEmpty().withMessage('Title is required'),
     body('description').notEmpty().withMessage('Description is required'),
-    body('price').isFloat({ min: 0 }).withMessage('Valid price is required'),
+    body('pricePerNight')
+      .isNumeric()
+      .withMessage('Price must be a valid number')
+      .custom(value => {
+        const num = parseFloat(value);
+        if (isNaN(num) || num <= 0) {
+          throw new Error('Price must be a positive number');
+        }
+        return true;
+      }),
     body('location').notEmpty().withMessage('Location is required'),
-    body('amenities').optional().isString(),
-    body('rules').optional().isString(),
+    body('amenities').optional(),
+    body('rules').optional(),
+    body('type').optional().isString(),
     body('bedrooms').optional().isInt({ min: 1 }).withMessage('Bedrooms must be a positive integer'),
     body('bathrooms').optional().isInt({ min: 1 }).withMessage('Bathrooms must be a positive integer'),
     body('maxGuests').optional().isInt({ min: 1 }).withMessage('Max guests must be a positive integer'),
+    body('checkInTime').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+    body('checkOutTime').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
   ],
   async (req, res, next) => {
     try {
@@ -159,36 +171,52 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const {
-        title,
-        description,
-        price,
-        location,
-        amenities,
-        country,
-        type,
-        bedrooms,
-        bathrooms,
-        maxGuests,
-        checkInTime,
-        checkOutTime,
-        rules
-      } = req.body;
+      const { title, description, pricePerNight, location, amenities, rules, country, type, bedrooms, bathrooms, maxGuests, checkInTime, checkOutTime } = req.body;
 
-      // Parse amenities if provided as string (comma-separated)
+      console.log('Received data:', { title, description, pricePerNight, location, amenities, rules, country, type, bedrooms, bathrooms, maxGuests });
+
+      // Parse amenities if provided as string
       let amenitiesData = [];
-      if (amenities && typeof amenities === 'string') {
-        amenitiesData = amenities.split(',').map(a => a.trim()).filter(a => a);
-      } else if (amenities && Array.isArray(amenities)) {
-        amenitiesData = amenities;
+      if (amenities) {
+        try {
+          if (typeof amenities === 'string') {
+            // Try JSON first, then fallback to comma-separated
+            try {
+              amenitiesData = JSON.parse(amenities);
+            } catch {
+              amenitiesData = amenities.split(',').map(a => a.trim()).filter(a => a);
+            }
+          } else if (Array.isArray(amenities)) {
+            amenitiesData = amenities;
+          }
+        } catch (e) {
+          return res.status(400).json({
+            error: 'Validation Error',
+            message: 'Invalid amenities format',
+          });
+        }
       }
 
-      // Parse rules if provided as string (newline-separated)
+      // Parse rules if provided as string
       let rulesData = [];
-      if (rules && typeof rules === 'string') {
-        rulesData = rules.split('\n').map(r => r.trim()).filter(r => r);
-      } else if (rules && Array.isArray(rules)) {
-        rulesData = rules;
+      if (rules) {
+        try {
+          if (typeof rules === 'string') {
+            // Try JSON first, then fallback to newline-separated
+            try {
+              rulesData = JSON.parse(rules);
+            } catch {
+              rulesData = rules.split('\n').map(r => r.trim()).filter(r => r);
+            }
+          } else if (Array.isArray(rules)) {
+            rulesData = rules;
+          }
+        } catch (e) {
+          return res.status(400).json({
+            error: 'Validation Error',
+            message: 'Invalid rules format',
+          });
+        }
       }
 
       // Upload images
@@ -214,25 +242,38 @@ if (req.files && req.files.length > 0) {
   }
 }
 
-      // Create property
+      // Validate and parse price
+      const priceValue = parseFloat(pricePerNight);
+      if (isNaN(priceValue) || priceValue <= 0) {
+        return res.status(400).json({
+          error: 'Validation Error',
+          message: 'Invalid price value',
+        });
+      }
+
+      // Create property - only include fields that exist in schema
+      const propertyData = {
+        hostId: req.user.id,
+        title,
+        description,
+        pricePerNight: priceValue,
+        location,
+        images: imageUrls,
+        amenities: amenitiesData,
+        country: country || null,
+      };
+
+      // Add optional fields if they exist in schema (after migration)
+      if (rules !== undefined) propertyData.rules = rulesData;
+      if (type !== undefined) propertyData.type = type || 'Квартира';
+      if (bedrooms !== undefined) propertyData.bedrooms = bedrooms ? parseInt(bedrooms, 10) : 1;
+      if (bathrooms !== undefined) propertyData.bathrooms = bathrooms ? parseInt(bathrooms, 10) : 1;
+      if (maxGuests !== undefined) propertyData.maxGuests = maxGuests ? parseInt(maxGuests, 10) : 2;
+      if (checkInTime !== undefined) propertyData.checkInTime = checkInTime || '14:00';
+      if (checkOutTime !== undefined) propertyData.checkOutTime = checkOutTime || '12:00';
+
       const property = await prisma.property.create({
-        data: {
-          hostId: req.user.id,
-          title,
-          description,
-          pricePerNight: parseFloat(price),
-          location,
-          images: imageUrls,
-          amenities: amenitiesData,
-          country: country || null,
-          type: type || null,
-          bedrooms: bedrooms ? parseInt(bedrooms) : null,
-          bathrooms: bathrooms ? parseInt(bathrooms) : null,
-          maxGuests: maxGuests ? parseInt(maxGuests) : null,
-          checkInTime: checkInTime || null,
-          checkOutTime: checkOutTime || null,
-          rules: rulesData,
-        },
+        data: propertyData,
         include: {
           host: {
             select: {

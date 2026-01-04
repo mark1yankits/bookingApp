@@ -32,6 +32,13 @@ model Property {
   location      String
   images        String[]  @default([])
   amenities     Json      @default("[]")
+  rules         Json      @default("[]")
+  type          String    @default("Квартира")
+  bedrooms      Int       @default(1)
+  bathrooms     Int       @default(1)
+  maxGuests     Int       @default(2)
+  checkInTime   String    @default("14:00") @map("check_in_time")
+  checkOutTime  String    @default("12:00") @map("check_out_time")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   country       String?
@@ -88,6 +95,7 @@ model Message {
   senderId   String   @map("sender_id")
   receiverId String   @map("receiver_id")
   content    String
+  isRead     Boolean  @default(false) @map("is_read")
   createdAt  DateTime @default(now()) @map("created_at")
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
