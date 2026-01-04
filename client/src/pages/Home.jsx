@@ -87,26 +87,26 @@ export default function Home() {
   return (
     <div>
       {/* Hero секція */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-900 text-white py-20">
+      <section className="bg-gradient-primary text-white py-20 theme-transition">
         <div className="max-w-7xl mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
-            <h1 className="text-5xl mb-6">Знайдіть ідеальне житло для оренди</h1>
-            <p className="text-xl opacity-90">
+            <h1 className="text-5xl mb-6 animate-fade-in">Знайдіть ідеальне житло для оренди</h1>
+            <p className="text-xl opacity-90 animate-fade-in" style={{ animationDelay: '0.2s' }}>
               Тисячі перевірених варіантів житла в Україні та за кордоном.
               Бронюйте безпечно та зручно.
             </p>
           </div>
 
           {/* Пошукова панель */}
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-5xl mx-auto">
+          <div className="bg-[var(--bg-tertiary)] rounded-lg shadow-theme-lg p-6 max-w-5xl mx-auto border border-[var(--border-color)] animate-slide-in" style={{ animationDelay: '0.4s' }}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
               {/* Місцезнаходження */}
               <div className="relative lg:col-span-2">
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Місцезнаходження
                 </label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: 'var(--text-muted)' }} />
                   <input
                     type="text"
                     value={searchLocation}
@@ -114,11 +114,11 @@ export default function Home() {
                     onFocus={() => setShowSuggestions(true)}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     placeholder="Куди плануєте поїхати?"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="input-primary"
                   />
                 </div>
                 {showSuggestions && locationSuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-10 w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg mt-1 shadow-theme-lg max-h-60 overflow-y-auto">
                     {locationSuggestions.map((loc, index) => (
                       <button
                         key={index}
@@ -126,9 +126,10 @@ export default function Home() {
                           setSearchLocation(loc)
                           setShowSuggestions(false)
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-gray-700 transition-colors"
+                        className="w-full px-4 py-2 text-left hover:bg-[var(--bg-secondary)] transition-colors"
+                        style={{ color: 'var(--text-primary)' }}
                       >
-                        <MapPin className="inline w-4 h-4 mr-2 text-gray-400" />
+                        <MapPin className="inline w-4 h-4 mr-2" style={{ color: 'var(--text-muted)' }} />
                         {loc}
                       </button>
                     ))}
@@ -138,7 +139,7 @@ export default function Home() {
 
               {/* Мінімальна ціна */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Від (₴)
                 </label>
                 <input
@@ -146,13 +147,13 @@ export default function Home() {
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
                   placeholder="500"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="input-primary"
                 />
               </div>
 
               {/* Максимальна ціна */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   До (₴)
                 </label>
                 <input
@@ -160,13 +161,13 @@ export default function Home() {
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
                   placeholder="3000"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="input-primary"
                 />
               </div>
 
               {/* Кнопка пошуку */}
               <div className="flex items-end">
-                <button className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                <button className="btn-primary w-full flex items-center justify-center gap-2">
                   <Search className="w-5 h-5" />
                   Пошук
                 </button>
@@ -174,16 +175,16 @@ export default function Home() {
             </div>
 
             {/* Додаткові фільтри */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
               {/* Тип житла */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Тип житла
                 </label>
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="input-primary"
                 >
                   <option value="all">Всі типи</option>
                   {propertyTypes.filter(t => t !== 'all').map(type => (
@@ -194,13 +195,13 @@ export default function Home() {
 
               {/* Кількість гостей */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Кількість гостей
                 </label>
                 <select
                   value={selectedGuests}
                   onChange={(e) => setSelectedGuests(parseInt(e.target.value))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="input-primary"
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
                     <option key={num} value={num}>

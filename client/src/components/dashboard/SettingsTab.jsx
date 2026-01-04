@@ -1,7 +1,9 @@
-import { Settings, Mail, Lock, User, Save } from 'lucide-react'
+import { Settings, Mail, Lock, User, Save, Sun, Moon, Monitor } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useTheme } from '../../context/ThemeContext'
 
 const SettingsTab = ({ user, onUpdateProfile }) => {
+  const { theme, toggleTheme, resetToSystemTheme, isUserPreference } = useTheme()
   const [settingsForm, setSettingsForm] = useState({
     email: user?.email || '',
     currentPassword: '',
@@ -158,6 +160,97 @@ const SettingsTab = ({ user, onUpdateProfile }) => {
                   minLength={6}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Theme Settings */}
+          <div className="bg-[var(--bg-tertiary)] rounded-lg p-6 border border-[var(--border-color)]">
+            <h3 className="text-lg font-medium mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              {theme === 'light' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              Зовнішній вигляд
+            </h3>
+
+            <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                💡 <strong>Порада:</strong> Виберіть тему, яка вам подобається більше.
+                Зміни застосовуються негайно.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="light-theme"
+                      name="theme"
+                      checked={theme === 'light' && isUserPreference}
+                      onChange={() => theme !== 'light' && toggleTheme()}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="light-theme" className="flex items-center gap-2 cursor-pointer">
+                      <Sun className="w-4 h-4 text-yellow-500" />
+                      <span style={{ color: 'var(--text-primary)' }}>Світла</span>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="dark-theme"
+                      name="theme"
+                      checked={theme === 'dark' && isUserPreference}
+                      onChange={() => theme !== 'dark' && toggleTheme()}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="dark-theme" className="flex items-center gap-2 cursor-pointer">
+                      <Moon className="w-4 h-4 text-blue-400" />
+                      <span style={{ color: 'var(--text-primary)' }}>Темна</span>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="system-theme"
+                      name="theme"
+                      checked={!isUserPreference}
+                      onChange={() => !isUserPreference && resetToSystemTheme()}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="system-theme" className="flex items-center gap-2 cursor-pointer">
+                      <Monitor className="w-4 h-4 text-gray-500" />
+                      <span style={{ color: 'var(--text-primary)' }}>Системна</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Поточна: <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                    {isUserPreference
+                      ? (theme === 'light' ? 'Світла' : 'Темна')
+                      : 'Системна'
+                    }
+                  </span>
+                </div>
+              </div>
+
+              {isUserPreference && (
+                <div className="pt-2 border-t" style={{ borderColor: 'var(--border-color)' }}>
+                  <button
+                    onClick={resetToSystemTheme}
+                    className="text-sm px-3 py-1 rounded-md transition-colors"
+                    style={{
+                      color: 'var(--accent-color)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)'
+                    }}
+                  >
+                    Скинути до системної теми
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

@@ -23,7 +23,7 @@ function PrivateRoute({ children }) {
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />

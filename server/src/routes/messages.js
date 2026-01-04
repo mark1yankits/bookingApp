@@ -367,7 +367,7 @@ router.post('/', authenticate, [
 
     res.status(201).json({
       message: 'Message sent successfully',
-      message: message,
+      data: message,
     });
   } catch (error) {
     next(error);

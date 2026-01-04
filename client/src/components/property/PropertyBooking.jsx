@@ -1,16 +1,57 @@
-import { Calendar, DollarSign, Clock, AlertCircle, Users, Star } from 'lucide-react'
+import { Calendar, DollarSign, Clock, AlertCircle, Users, Star, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import api from '../../api/api'
 
 const PropertyBooking = ({ property, reviewsData, userBooking }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [adults, setAdults] = useState(1)
   const [children, setChildren] = useState(0)
   const [showBookingSuccess, setShowBookingSuccess] = useState(false)
+
+  const bookingMutation = useMutation({
+    mutationFn: async (bookingData) => {
+      const response = await api.post('/bookings', bookingData)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['userBooking', property.id, user?.id])
+      queryClient.invalidateQueries(['myBookings'])
+      setShowBookingSuccess(true)
+      setTimeout(() => {
+        setShowBookingSuccess(false)
+        setStartDate('')
+        setEndDate('')
+        setAdults(1)
+        setChildren(0)
+      }, 3000)
+      alert('Бронювання успішно створено!')
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || 'Помилка при створенні бронювання')
+    },
+  })
+
+  const cancelBookingMutation = useMutation({
+    mutationFn: async ({ bookingId, reason }) => {
+      const response = await api.patch(`/bookings/${bookingId}/cancel`, { reason })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['userBooking', property.id, user?.id])
+      queryClient.invalidateQueries(['myBookings'])
+      alert('Бронювання успішно скасовано!')
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || 'Помилка при скасуванні бронювання')
+    },
+  })
 
   const rating = reviewsData && reviewsData.length > 0
     ? (reviewsData.reduce((sum, r) => sum + r.rating, 0) / reviewsData.length).toFixed(1)
@@ -58,16 +99,13 @@ const PropertyBooking = ({ property, reviewsData, userBooking }) => {
       return
     }
 
-    alert('Бронювання буде доступне після запуску сервера')
-    setShowBookingSuccess(true)
+    const bookingData = {
+      propertyId: property.id,
+      startDate: new Date(startDate).toISOString(),
+      endDate: new Date(endDate).toISOString(),
+    }
 
-    setTimeout(() => {
-      setShowBookingSuccess(false)
-      setStartDate('')
-      setEndDate('')
-      setAdults(1)
-      setChildren(0)
-    }, 3000)
+    bookingMutation.mutate(bookingData)
   }
 
   if (userBooking) {
@@ -132,21 +170,24 @@ const PropertyBooking = ({ property, reviewsData, userBooking }) => {
           <div className="mb-6">
             <button
               onClick={() => {
-                const reason = prompt('Вкажіть причину скасування (необов\'язково):')
-                if (reason !== null) {
-                  // TODO: Implement cancel booking
-                  alert('Функція скасування буде реалізована після підключення сервера')
+                if (confirm('Ви впевнені, що хочете скасувати це бронювання?')) {
+                  const reason = prompt('Вкажіть причину скасування (необов\'язково):')
+                  cancelBookingMutation.mutate({ 
+                    bookingId: userBooking.id, 
+                    reason: reason || undefined 
+                  })
                 }
               }}
-              className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              disabled={cancelBookingMutation.isPending}
+              className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Скасувати бронювання
+              {cancelBookingMutation.isPending ? 'Скасування...' : 'Скасувати бронювання'}
             </button>
           </div>
         )}
 
         <div className="border-t pt-4" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-2 mb-4">
             <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--accent-color)' }} />
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Потрібна допомога?</p>
@@ -155,6 +196,13 @@ const PropertyBooking = ({ property, reviewsData, userBooking }) => {
               </p>
             </div>
           </div>
+          <button
+            onClick={() => navigate(`/dashboard?tab=messages&propertyId=${property.id}`)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Написати господарю
+          </button>
         </div>
       </div>
     )
@@ -269,10 +317,10 @@ const PropertyBooking = ({ property, reviewsData, userBooking }) => {
 
           <button
             onClick={handleBooking}
-            disabled={(adults + children) > (property.maxGuests || 4)}
+            disabled={(adults + children) > (property.maxGuests || 4) || bookingMutation.isPending}
             className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            Забронювати
+            {bookingMutation.isPending ? 'Створення бронювання...' : 'Забронювати'}
           </button>
         </>
       ) : (
@@ -307,7 +355,16 @@ const PropertyBooking = ({ property, reviewsData, userBooking }) => {
 
       <div className="mt-4 pt-4 border-t border-gray-200">
         <p className="text-sm text-gray-600 mb-2">Господар</p>
-        <p className="text-gray-900">{property.ownerName || 'Невідомий господар'}</p>
+        <p className="text-gray-900 mb-3">{property.host?.email || property.ownerName || 'Невідомий господар'}</p>
+        {user && (
+          <button
+            onClick={() => navigate(`/dashboard?tab=messages&propertyId=${property.id}`)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Написати господарю
+          </button>
+        )}
       </div>
     </div>
   )

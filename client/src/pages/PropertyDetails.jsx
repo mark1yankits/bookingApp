@@ -108,16 +108,16 @@ export default function PropertyDetails() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Завантаження...</div>
+      <div className="min-h-screen flex items-center justify-center theme-transition" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <div className="text-lg" style={{ color: 'var(--text-primary)' }}>Завантаження...</div>
       </div>
     )
   }
 
   if (!property) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-red-600">Нерухомість не знайдена</div>
+      <div className="min-h-screen flex items-center justify-center theme-transition" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <div className="text-lg" style={{ color: 'var(--error-color)' }}>Нерухомість не знайдена</div>
       </div>
     )
   }
@@ -130,7 +130,8 @@ export default function PropertyDetails() {
       {/* Кнопка назад */}
       <button
         onClick={() => navigate('/')}
-        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-6 transition-colors"
+        className="flex items-center gap-2 mb-6 transition-colors hover-lift px-3 py-2 rounded-lg"
+        style={{ color: 'var(--accent-color)' }}
       >
         <ChevronLeft className="w-5 h-5" />
         Повернутися до пошуку
@@ -139,14 +140,14 @@ export default function PropertyDetails() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2">
-          <h1 className="text-3xl font-bold mb-4">{property.title}</h1>
+          <h1 className="text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>{property.title}</h1>
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center text-gray-600">
-              <MapPin className="h-5 w-5 mr-2" />
+            <div className="flex items-center" style={{ color: 'var(--text-secondary)' }}>
+              <MapPin className="h-5 w-5 mr-2" style={{ color: 'var(--accent-color)' }} />
               <span>{property.location}</span>
-              {property.country && <span className="ml-2 text-gray-500">• {property.country}</span>}
+              {property.country && <span className="ml-2" style={{ color: 'var(--text-muted)' }}>• {property.country}</span>}
             </div>
-            <div className="flex items-center text-gray-600 text-sm">
+            <div className="flex items-center text-sm" style={{ color: 'var(--text-secondary)' }}>
               <Eye className="h-4 w-4 mr-1" />
               <span>{property.views || 0} переглядів</span>
             </div>
@@ -160,44 +161,44 @@ export default function PropertyDetails() {
 
           {/* Weather Section */}
           {weather && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                <Cloud className="h-6 w-6 mr-2 text-blue-600" />
+            <div className="card p-6 animate-slide-in" style={{ animationDelay: '0.6s' }}>
+              <h2 className="text-2xl font-semibold mb-4 flex items-center" style={{ color: 'var(--text-primary)' }}>
+                <Cloud className="h-6 w-6 mr-2" style={{ color: 'var(--accent-color)' }} />
                 Погода в {weather.location || property.country}
               </h2>
               {weatherLoading ? (
-                <div className="text-center py-4">Завантаження погоди...</div>
+                <div className="text-center py-4" style={{ color: 'var(--text-secondary)' }}>Завантаження погоди...</div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="flex items-center space-x-2">
-                    <Thermometer className="h-5 w-5 text-red-500" />
+                    <Thermometer className="h-5 w-5" style={{ color: 'var(--error-color)' }} />
                     <div>
-                      <p className="text-sm text-gray-600">Температура</p>
-                      <p className="text-lg font-semibold">{weather.temperature}°C</p>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Температура</p>
+                      <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{weather.temperature}°C</p>
                       {weather.feelsLike && (
-                        <p className="text-xs text-gray-500">Відчувається як {weather.feelsLike}°C</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Відчувається як {weather.feelsLike}°C</p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Cloud className="h-5 w-5 text-gray-500" />
+                    <Cloud className="h-5 w-5" style={{ color: 'var(--text-secondary)' }} />
                     <div>
-                      <p className="text-sm text-gray-600">Погода</p>
-                      <p className="text-lg font-semibold capitalize">{weather.description}</p>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Погода</p>
+                      <p className="text-lg font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>{weather.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Droplets className="h-5 w-5 text-blue-500" />
+                    <Droplets className="h-5 w-5" style={{ color: 'var(--accent-color)' }} />
                     <div>
-                      <p className="text-sm text-gray-600">Вологість</p>
-                      <p className="text-lg font-semibold">{weather.humidity}%</p>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Вологість</p>
+                      <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{weather.humidity}%</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Wind className="h-5 w-5 text-gray-400" />
+                    <Wind className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                     <div>
-                      <p className="text-sm text-gray-600">Вітер</p>
-                      <p className="text-lg font-semibold">{weather.windSpeed} км/год</p>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Вітер</p>
+                      <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{weather.windSpeed} км/год</p>
                     </div>
                   </div>
                 </div>

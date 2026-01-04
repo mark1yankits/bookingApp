@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Calendar, Home, MessageSquare, Settings, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -11,7 +12,16 @@ import SettingsTab from '../components/dashboard/SettingsTab'
 export default function Dashboard() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState('bookings')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'bookings')
+
+  // Update active tab when URL param changes
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam) {
+      setActiveTab(tabParam)
+    }
+  }, [searchParams])
 
   // Fetch user's bookings
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
@@ -33,14 +43,28 @@ export default function Dashboard() {
     enabled: !!user && (user.role === 'host' || user.role === 'admin'),
   })
 
-  // Fetch user's messages
-  const { data: messagesData, isLoading: messagesLoading, refetch: refetchMessages } = useQuery({
+  // Fetch user's messages with real-time updates
+  const { data: messagesData, isLoading: messagesLoading, refetch: refetchMessages, isFetching } = useQuery({
     queryKey: ['myMessages'],
     queryFn: async () => {
       const response = await api.get('/messages/my-messages')
       return response.data
     },
     enabled: !!user,
+    refetchInterval: 3000, // Оновлювати кожні 3 секунди для отримання нових повідомлень
+    refetchIntervalInBackground: false, // Не оновлювати у фоні
+  })
+
+  // Fetch property info if propertyId is in URL params
+  const propertyId = searchParams.get('propertyId')
+  const { data: initialProperty } = useQuery({
+    queryKey: ['property', propertyId],
+    queryFn: async () => {
+      if (!propertyId) return null
+      const response = await api.get(`/properties/${propertyId}`)
+      return response.data.property
+    },
+    enabled: !!propertyId,
   })
 
   const propertyMutation = useMutation({
@@ -110,11 +134,110 @@ export default function Dashboard() {
       const response = await api.post('/messages', messageData)
       return response.data
     },
-    onSuccess: () => {
-      refetchMessages()
+    onMutate: async (variables) => {
+      // Скасовуємо будь-які вхідні refetch
+      await queryClient.cancelQueries({ queryKey: ['myMessages'] })
+
+      // Зберігаємо попередній стан
+      const previousData = queryClient.getQueryData(['myMessages'])
+
+      // Оптимістичне оновлення
+      queryClient.setQueryData(['myMessages'], (oldData) => {
+        if (!oldData) return oldData
+
+        let updatedConversations = [...oldData.conversations]
+        let conversationFound = false
+
+        updatedConversations = updatedConversations.map((conversation) => {
+          // Знаходимо розмову, до якої було надіслано повідомлення
+          if (conversation.property.id === variables.propertyId &&
+              conversation.otherUser.id === variables.receiverId) {
+
+            conversationFound = true
+
+            const optimisticMessage = {
+              id: `optimistic-${Date.now()}`, // Оптимістичний ID
+              content: variables.content,
+              senderId: user.id,
+              receiverId: variables.receiverId,
+              propertyId: variables.propertyId,
+              isRead: false,
+              createdAt: new Date(Date.now() + 1).toISOString(), // Трохи в майбутньому, щоб бути останнім
+              isOptimistic: true // Позначка для оптимістичного оновлення
+            }
+
+            return {
+              ...conversation,
+              messages: [...conversation.messages, optimisticMessage],
+              lastMessage: optimisticMessage,
+              unreadCount: conversation.otherUser.id === user.id ? conversation.unreadCount + 1 : conversation.unreadCount
+            }
+          }
+          return conversation
+        })
+
+        // Якщо розмова не знайдена, створюємо нову (хоча це не повинно траплятися)
+        if (!conversationFound) {
+          console.warn('Conversation not found for optimistic update, this should not happen')
+        }
+
+        return {
+          ...oldData,
+          conversations: updatedConversations
+        }
+      })
+
+      return { previousData }
     },
-    onError: (error) => {
+    onSuccess: (data, variables, context) => {
+      // Замінюємо оптимістичне повідомлення на реальне
+      console.log('Message sent successfully:', data) // Додаємо логування для діагностики
+      queryClient.setQueryData(['myMessages'], (oldData) => {
+        if (!oldData) return oldData
+
+        const updatedConversations = oldData.conversations.map((conversation) => {
+          if (conversation.property.id === variables.propertyId &&
+              conversation.otherUser.id === variables.receiverId) {
+
+            // Знаходимо і замінюємо оптимістичне повідомлення на реальне
+            const messages = conversation.messages.map((msg) =>
+              msg.isOptimistic ? {
+                ...data.data, // Використовуємо правильну структуру відповіді
+                isOptimistic: false
+              } : msg
+            )
+
+            return {
+              ...conversation,
+              messages,
+              lastMessage: data.data // Використовуємо правильну структуру відповіді
+            }
+          }
+          return conversation
+        })
+
+        return {
+          ...oldData,
+          conversations: updatedConversations
+        }
+      })
+    },
+    onError: (error, variables, context) => {
+      // Відкочуємо до попереднього стану при помилці
+      if (context?.previousData) {
+        queryClient.setQueryData(['myMessages'], context.previousData)
+      }
       alert(error.response?.data?.message || 'Помилка при відправці повідомлення')
+    },
+    onSettled: () => {
+      // Завжди синхронізуємо з сервером через 0.5 секунди для швидшої видимості
+      console.log('Message settled, refreshing data...')
+      setTimeout(() => {
+        console.log('Invalidating myMessages query')
+        queryClient.invalidateQueries(['myMessages'])
+        // Також робимо прямий refetch для гарантії
+        refetchMessages()
+      }, 500)
     },
   })
 
@@ -248,6 +371,11 @@ export default function Dashboard() {
             messagesLoading={messagesLoading}
             onSendMessage={handleSendMessage}
             onMarkAsRead={handleMarkAsRead}
+            initialPropertyId={searchParams.get('propertyId')}
+            initialProperty={initialProperty}
+            isSendingMessage={sendMessageMutation.isPending}
+            isFetchingMessages={isFetching}
+            onRefresh={() => refetchMessages()}
           />
         )}
         {activeTab === 'settings' && (
