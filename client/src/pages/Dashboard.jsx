@@ -15,7 +15,6 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'bookings')
 
-  // Update active tab when URL param changes
   useEffect(() => {
     const tabParam = searchParams.get('tab')
     if (tabParam) {
@@ -23,7 +22,6 @@ export default function Dashboard() {
     }
   }, [searchParams])
 
-  // Fetch user's bookings
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ['myBookings'],
     queryFn: async () => {
@@ -33,7 +31,6 @@ export default function Dashboard() {
     enabled: !!user,
   })
 
-  // Fetch host's properties
   const { data: myProperties, isLoading: propertiesLoading } = useQuery({
     queryKey: ['myProperties'],
     queryFn: async () => {
@@ -43,7 +40,6 @@ export default function Dashboard() {
     enabled: !!user && (user.role === 'host' || user.role === 'admin'),
   })
 
-  // Fetch user's messages with real-time updates
   const { data: messagesData, isLoading: messagesLoading, refetch: refetchMessages, isFetching } = useQuery({
     queryKey: ['myMessages'],
     queryFn: async () => {
@@ -51,11 +47,10 @@ export default function Dashboard() {
       return response.data
     },
     enabled: !!user,
-    refetchInterval: 3000, // Оновлювати кожні 3 секунди для отримання нових повідомлень
-    refetchIntervalInBackground: false, // Не оновлювати у фоні
+    refetchInterval: 3000, 
+    refetchIntervalInBackground: false, 
   })
 
-  // Fetch property info if propertyId is in URL params
   const propertyId = searchParams.get('propertyId')
   const { data: initialProperty } = useQuery({
     queryKey: ['property', propertyId],
@@ -133,9 +128,7 @@ export default function Dashboard() {
     mutationFn: async (messageData) => {
       console.log('Sending message via mutation:', messageData);
 
-      // Check if we have attachments
       if (messageData.attachments && messageData.attachments.length > 0) {
-        // Send as FormData for files
         const formData = new FormData()
         formData.append('receiverId', messageData.receiverId)
         formData.append('propertyId', messageData.propertyId)
@@ -148,7 +141,6 @@ export default function Dashboard() {
         const response = await api.post('/messages', formData)
         return response.data
       } else {
-        // Send as regular JSON
         const response = await api.post('/messages', {
           receiverId: messageData.receiverId,
           propertyId: messageData.propertyId,
@@ -158,13 +150,10 @@ export default function Dashboard() {
       }
     },
     onMutate: async (variables) => {
-      // Скасовуємо будь-які вхідні refetch
       await queryClient.cancelQueries({ queryKey: ['myMessages'] })
 
-      // Зберігаємо попередній стан
       const previousData = queryClient.getQueryData(['myMessages'])
 
-      // Оптимістичне оновлення
       queryClient.setQueryData(['myMessages'], (oldData) => {
         if (!oldData) return oldData
 
@@ -172,23 +161,22 @@ export default function Dashboard() {
         let conversationFound = false
 
         updatedConversations = updatedConversations.map((conversation) => {
-          // Знаходимо розмову, до якої було надіслано повідомлення
           if (conversation.property.id === variables.propertyId &&
               conversation.otherUser.id === variables.receiverId) {
 
             conversationFound = true
 
             const optimisticMessage = {
-              id: `optimistic-${Date.now()}`, // Оптимістичний ID
+              id: `optimistic-${Date.now()}`,
               content: variables.content,
               senderId: user.id,
               receiverId: variables.receiverId,
               propertyId: variables.propertyId,
               isRead: false,
-              createdAt: new Date(Date.now() + 1).toISOString(), // Трохи в майбутньому, щоб бути останнім
+              createdAt: new Date(Date.now() + 1).toISOString(),
               attachments: variables.attachments || [],
               messageType: variables.attachments && variables.attachments.length > 0 ? 'file' : 'text',
-              isOptimistic: true // Позначка для оптимістичного оновлення
+              isOptimistic: true 
             }
 
             return {
@@ -201,7 +189,6 @@ export default function Dashboard() {
           return conversation
         })
 
-        // Якщо розмова не знайдена, створюємо нову (хоча це не повинно траплятися)
         if (!conversationFound) {
           console.warn('Conversation not found for optimistic update, this should not happen')
         }
@@ -215,8 +202,7 @@ export default function Dashboard() {
       return { previousData }
     },
     onSuccess: (data, variables, context) => {
-      // Замінюємо оптимістичне повідомлення на реальне
-      console.log('Message sent successfully:', data) // Додаємо логування для діагностики
+      console.log('Message sent successfully:', data) 
       queryClient.setQueryData(['myMessages'], (oldData) => {
         if (!oldData) return oldData
 
@@ -224,10 +210,9 @@ export default function Dashboard() {
           if (conversation.property.id === variables.propertyId &&
               conversation.otherUser.id === variables.receiverId) {
 
-            // Знаходимо і замінюємо оптимістичне повідомлення на реальне
             const messages = conversation.messages.map((msg) =>
               msg.isOptimistic ? {
-                ...data.data, // Використовуємо правильну структуру відповіді
+                ...data.data, 
                 isOptimistic: false
               } : msg
             )
@@ -235,7 +220,7 @@ export default function Dashboard() {
             return {
               ...conversation,
               messages,
-              lastMessage: data.data // Використовуємо правильну структуру відповіді
+              lastMessage: data.data 
             }
           }
           return conversation
@@ -248,19 +233,16 @@ export default function Dashboard() {
       })
     },
     onError: (error, variables, context) => {
-      // Відкочуємо до попереднього стану при помилці
       if (context?.previousData) {
         queryClient.setQueryData(['myMessages'], context.previousData)
       }
       alert(error.response?.data?.message || 'Помилка при відправці повідомлення')
     },
     onSettled: () => {
-      // Завжди синхронізуємо з сервером через 0.5 секунди для швидшої видимості
       console.log('Message settled, refreshing data...')
       setTimeout(() => {
         console.log('Invalidating myMessages query')
         queryClient.invalidateQueries(['myMessages'])
-        // Також робимо прямий refetch для гарантії
         refetchMessages()
       }, 500)
     },

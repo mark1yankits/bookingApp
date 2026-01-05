@@ -18,7 +18,7 @@ router.get('/property/:propertyId', async (req, res, next) => {
           select: {
             id: true,
             email: true,
-            // Можна додати ім'я користувача, якщо буде поле name
+            name: true
           },
         },
       },
@@ -33,7 +33,6 @@ router.get('/property/:propertyId', async (req, res, next) => {
   }
 });
 
-// Create a new review (Authenticated users only)
 router.post(
   '/',
   authenticate,
@@ -52,7 +51,6 @@ router.post(
       const { propertyId, rating, comment } = req.body;
       const userId = req.user.id;
 
-      // Check if user already reviewed this property
       console.log('Creating review for propertyId:', propertyId, 'userId:', userId);
       const existingReview = await prisma.review.findFirst({
         where: {
@@ -106,12 +104,11 @@ router.post(
         await prisma.property.update({
           where: { id: propertyId },
           data: {
-            rating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
+            rating: Math.round(averageRating * 10) / 10, 
           },
         });
       } catch (ratingError) {
         console.warn('Failed to update property rating:', ratingError.message);
-        // Don't fail the whole request if rating update fails
       }
 
       res.status(201).json({
@@ -124,7 +121,6 @@ router.post(
   }
 );
 
-// Update a review (Review owner only)
 router.put(
   '/:reviewId',
   authenticate,

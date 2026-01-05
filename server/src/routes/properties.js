@@ -175,12 +175,10 @@ router.post(
 
       console.log('Received data:', { title, description, pricePerNight, location, amenities, rules, country, type, bedrooms, bathrooms, maxGuests });
 
-      // Parse amenities if provided as string
       let amenitiesData = [];
       if (amenities) {
         try {
           if (typeof amenities === 'string') {
-            // Try JSON first, then fallback to comma-separated
             try {
               amenitiesData = JSON.parse(amenities);
             } catch {
@@ -197,12 +195,10 @@ router.post(
         }
       }
 
-      // Parse rules if provided as string
       let rulesData = [];
       if (rules) {
         try {
           if (typeof rules === 'string') {
-            // Try JSON first, then fallback to newline-separated
             try {
               rulesData = JSON.parse(rules);
             } catch {
@@ -218,14 +214,11 @@ router.post(
           });
         }
       }
-
-      // Upload images
       const imageUrls = [];
 if (req.files && req.files.length > 0) {
   for (const file of req.files) {
     let url;
     
-    // Якщо використовується S3, URL вже в file.location
     if (file.location) {
       url = file.location;
     } else if (file.buffer) {
@@ -294,7 +287,6 @@ if (req.files && req.files.length > 0) {
   }
 );
 
-// Get host's properties
 router.get('/host/my-properties', authenticate, requireRole('host', 'admin'), async (req, res, next) => {
   try {
     const properties = await prisma.property.findMany({
@@ -317,7 +309,6 @@ router.get('/host/my-properties', authenticate, requireRole('host', 'admin'), as
       },
     });
 
-    // Transform properties to include reviewCount
     const transformedProperties = properties.map(({ _count, ...prop }) => ({
       ...prop,
       reviewCount: _count.reviews,
@@ -329,7 +320,6 @@ router.get('/host/my-properties', authenticate, requireRole('host', 'admin'), as
   }
 });
 
-// Search locations for autocomplete
 router.get('/locations/search', async (req, res, next) => {
   try {
     const { q } = req.query;
@@ -338,7 +328,6 @@ router.get('/locations/search', async (req, res, next) => {
       return res.json({ locations: [] });
     }
 
-    // Get unique locations that match the search query
     const properties = await prisma.property.findMany({
       where: {
         location: {
@@ -350,11 +339,10 @@ router.get('/locations/search', async (req, res, next) => {
         location: true,
         country: true,
       },
-      take: 10, // Limit results
-      distinct: ['location'], // Get unique locations
+      take: 10, 
+      distinct: ['location'], 
     });
 
-    // Also search by country if available
     let countryResults = [];
     if (properties.length < 5) {
       countryResults = await prisma.property.findMany({
@@ -373,13 +361,11 @@ router.get('/locations/search', async (req, res, next) => {
       });
     }
 
-    // Combine and deduplicate results
     const allResults = [...properties, ...countryResults];
     const uniqueLocations = allResults.filter((item, index, self) =>
       index === self.findIndex(t => t.location === item.location)
     );
 
-    // Format results
     const locations = uniqueLocations.map(item => ({
       name: item.location,
       country: item.country || '',

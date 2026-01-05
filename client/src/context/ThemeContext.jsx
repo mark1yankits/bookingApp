@@ -4,7 +4,6 @@ const ThemeContext = createContext(null)
 
 export const themes = {
   light: {
-    // Основні кольори
     '--bg-primary': '#ffffff',
     '--bg-secondary': '#f8fafc',
     '--bg-tertiary': '#ffffff',
@@ -18,16 +17,13 @@ export const themes = {
     '--error-color': '#ef4444',
     '--warning-color': '#f59e0b',
 
-    // Тіні
     '--shadow-sm': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
     '--shadow-md': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
     '--shadow-lg': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
 
-    // Градієнти
     '--gradient-primary': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   },
   dark: {
-    // Основні кольори
     '--bg-primary': '#0f172a',
     '--bg-secondary': '#1e293b',
     '--bg-tertiary': '#334155',
@@ -41,32 +37,27 @@ export const themes = {
     '--error-color': '#f87171',
     '--warning-color': '#fbbf24',
 
-    // Тіні
     '--shadow-sm': '0 1px 2px 0 rgb(0 0 0 / 0.3)',
     '--shadow-md': '0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4)',
     '--shadow-lg': '0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5)',
 
-    // Градієнти
+    
     '--gradient-primary': 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
   }
 }
 
-// Функція для отримання початкової теми
 const getInitialTheme = () => {
-  if (typeof window === 'undefined') return 'light' // SSR fallback
+  if (typeof window === 'undefined') return 'light' 
 
-  // Спочатку перевіряємо localStorage
   const savedTheme = localStorage.getItem('theme')
   if (savedTheme && themes[savedTheme]) {
     return savedTheme
   }
 
-  // Якщо немає збереженої теми, використовуємо системну
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
   return prefersDark ? 'dark' : 'light'
 }
 
-// Функція для перевірки, чи встановлена користувачем тема
 const isUserSetTheme = () => {
   return localStorage.getItem('theme') !== null
 }
@@ -75,23 +66,19 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(getInitialTheme)
   const [isUserPreference, setIsUserPreference] = useState(isUserSetTheme)
 
-  // Застосування теми до document
   useEffect(() => {
     const root = document.documentElement
     const themeVars = themes[theme]
 
-    // Застосовуємо тему до CSS змінних
     Object.entries(themeVars).forEach(([property, value]) => {
       root.style.setProperty(property, value)
     })
 
-    // Збереження в localStorage тільки якщо це вибір користувача
     if (isUserPreference) {
       localStorage.setItem('theme', theme)
     }
   }, [theme, isUserPreference])
 
-  // Відстеження зміни системної теми (тільки якщо користувач не встановив власну)
   useEffect(() => {
     if (typeof window === 'undefined' || isUserPreference) return
 
@@ -105,7 +92,7 @@ export function ThemeProvider({ children }) {
   }, [isUserPreference])
 
   const toggleTheme = () => {
-    setIsUserPreference(true) // Помічаємо, що користувач зробив вибір
+    setIsUserPreference(true) 
     setTheme(prev => prev === 'light' ? 'dark' : 'light')
   }
 

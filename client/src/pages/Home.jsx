@@ -53,14 +53,12 @@ export default function Home() {
   const filteredProperties = useMemo(() => {
     let filtered = properties
 
-    // Фільтр за локацією
     if (searchLocation) {
       filtered = filtered.filter(p =>
         p.location.toLowerCase().includes(searchLocation.toLowerCase())
       )
     }
 
-    // Фільтр за ціною
     if (minPrice) {
       filtered = filtered.filter(p => p.pricePerNight >= parseInt(minPrice))
     }
@@ -68,7 +66,6 @@ export default function Home() {
       filtered = filtered.filter(p => p.pricePerNight <= parseInt(maxPrice))
     }
 
-    // Фільтр за типом (якщо є)
     if (selectedType !== 'all') {
       filtered = filtered.filter(p => p.type === selectedType)
     }
@@ -86,7 +83,6 @@ export default function Home() {
 
   return (
     <div>
-      {/* Hero секція */}
       <section className="bg-gradient-primary text-white py-20 theme-transition">
         <div className="max-w-7xl mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
@@ -97,10 +93,8 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Пошукова панель */}
           <div className="bg-[var(--bg-tertiary)] rounded-lg shadow-theme-lg p-6 max-w-5xl mx-auto border border-[var(--border-color)] animate-slide-in" style={{ animationDelay: '0.4s' }}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-              {/* Місцезнаходження */}
               <div className="relative lg:col-span-2">
                 <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Місцезнаходження
@@ -137,7 +131,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Мінімальна ціна */}
               <div>
                 <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Від (₴)
@@ -151,7 +144,6 @@ export default function Home() {
                 />
               </div>
 
-              {/* Максимальна ціна */}
               <div>
                 <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   До (₴)
@@ -165,7 +157,6 @@ export default function Home() {
                 />
               </div>
 
-              {/* Кнопка пошуку */}
               <div className="flex items-end">
                 <button className="btn-primary w-full flex items-center justify-center gap-2">
                   <Search className="w-5 h-5" />
@@ -174,9 +165,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Додаткові фільтри */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
-              {/* Тип житла */}
               <div>
                 <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Тип житла
@@ -193,7 +182,6 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Кількість гостей */}
               <div>
                 <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Кількість гостей
@@ -210,15 +198,12 @@ export default function Home() {
                   ))}
                 </select>
               </div>
-
-              {/* Порожнє місце або інші фільтри */}
               <div></div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Сітка нерухомості */}
       <section className="max-w-7xl mx-auto px-4 py-12">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl text-gray-900">
