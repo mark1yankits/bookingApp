@@ -1,9 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Home, User, LogOut, LogIn } from 'lucide-react'
+import { Home, User, LogOut, LogIn, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -24,6 +26,16 @@ export default function Navbar() {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
+            {/* Кнопка переключення теми */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg transition-all duration-200 hover-lift"
+              style={{ color: 'var(--text-secondary)' }}
+              title={`Переключити на ${theme === 'light' ? 'темну' : 'світлу'} тему`}
+            >
+              {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+
             {user ? (
               <>
                 <Link
