@@ -16,6 +16,8 @@ router.post(
     body('password')
       .isLength({ min: 6 })
       .withMessage('Password must be at least 6 characters'),
+    body('name').optional().notEmpty().withMessage('Name cannot be empty'),
+    body('phone').optional().notEmpty().withMessage('Phone number cannot be empty'),
     body('role').optional().isIn(['guest', 'host', 'admin']).withMessage('Invalid role'),
   ],
   async (req, res, next) => {
@@ -25,7 +27,15 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { email, password, role = 'guest' } = req.body;
+      const { email, password, name, phone, role = 'guest' } = req.body;
+
+      // Validate required fields for new registration
+      if (!name || !phone) {
+        return res.status(400).json({
+          error: 'Validation Error',
+          message: 'Name and phone number are required'
+        });
+      }
 
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
@@ -46,12 +56,16 @@ router.post(
       const user = await prisma.user.create({
         data: {
           email,
+          name,
           passwordHash,
           role,
+          phone,
         },
         select: {
           id: true,
           email: true,
+          name: true,
+          phone: true,
           role: true,
           createdAt: true,
         },
@@ -59,7 +73,7 @@ router.post(
 
       // Generate JWT
       const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user.id, email: user.email, name: user.name, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: '7d' }
       );
@@ -115,7 +129,7 @@ router.post(
 
       // Generate JWT
       const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user.id, email: user.email, name: user.name, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: '7d' }
       );

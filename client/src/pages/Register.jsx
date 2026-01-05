@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext'
 
 export default function Register() {
   const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState('guest')
@@ -27,10 +29,21 @@ export default function Register() {
       return
     }
 
+    // Name and phone are optional for backward compatibility, but we'll require them for new registrations
+    if (!name.trim()) {
+      setError('Ім\'я обов\'язкове')
+      return
+    }
+
+    if (!phone.trim()) {
+      setError('Номер телефону обов\'язковий')
+      return
+    }
+
     setLoading(true)
 
     try {
-      await register(email, password, role)
+      await register(email, password, role, name, phone)
       navigate('/dashboard')
     } catch (err) {
       setError(
@@ -59,6 +72,38 @@ export default function Register() {
             </div>
           )}
           <div className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Ім'я
+              </label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="input-primary"
+                placeholder="Ваше ім'я"
+              />
+            </div>
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Номер телефону
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="input-primary"
+                placeholder="+380XXXXXXXXX"
+              />
+            </div>
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Email адреса

@@ -11,8 +11,10 @@ datasource db {
 model User {
   id               String     @id @default(uuid())
   email            String     @unique
+  name             String?
   passwordHash     String     @map("password_hash")
   role             UserRole   @default(guest)
+  phone            String?
   createdAt        DateTime   @default(now()) @map("created_at")
   bookings         Booking[]
   receivedMessages Message[]  @relation("ReceivedMessages")
@@ -90,6 +92,8 @@ model Message {
   content    String
   isRead     Boolean  @default(false) @map("is_read")
   createdAt  DateTime @default(now()) @map("created_at")
+  attachments Json?   @default("[]")
+  messageType String  @default("text") @map("message_type")
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)

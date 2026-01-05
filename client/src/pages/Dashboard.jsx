@@ -131,8 +131,31 @@ export default function Dashboard() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData) => {
-      const response = await api.post('/messages', messageData)
-      return response.data
+      console.log('Sending message via mutation:', messageData);
+
+      // Check if we have attachments
+      if (messageData.attachments && messageData.attachments.length > 0) {
+        // Send as FormData for files
+        const formData = new FormData()
+        formData.append('receiverId', messageData.receiverId)
+        formData.append('propertyId', messageData.propertyId)
+        formData.append('content', messageData.content)
+
+        messageData.attachments.forEach((file) => {
+          formData.append('attachments', file)
+        })
+
+        const response = await api.post('/messages', formData)
+        return response.data
+      } else {
+        // Send as regular JSON
+        const response = await api.post('/messages', {
+          receiverId: messageData.receiverId,
+          propertyId: messageData.propertyId,
+          content: messageData.content
+        })
+        return response.data
+      }
     },
     onMutate: async (variables) => {
       // Скасовуємо будь-які вхідні refetch
@@ -163,6 +186,8 @@ export default function Dashboard() {
               propertyId: variables.propertyId,
               isRead: false,
               createdAt: new Date(Date.now() + 1).toISOString(), // Трохи в майбутньому, щоб бути останнім
+              attachments: variables.attachments || [],
+              messageType: variables.attachments && variables.attachments.length > 0 ? 'file' : 'text',
               isOptimistic: true // Позначка для оптимістичного оновлення
             }
 

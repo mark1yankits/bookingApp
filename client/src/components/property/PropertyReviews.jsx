@@ -46,16 +46,19 @@ const PropertyReviews = ({
   const canAddReview = user && !userReview
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl text-gray-900 flex items-center gap-2">
-          <MessageSquare className="w-6 h-6" />
+    <div className="card mt-6">
+      <div className="flex justify-between items-center mb-6 p-4">
+        <h2 className="text-2xl flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <MessageSquare className="w-6 h-6" style={{ color: 'var(--accent-color)' }} />
           Відгуки
         </h2>
         {canAddReview && !showReviewForm && (
           <button
             onClick={() => setShowReviewForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            style={{ backgroundColor: 'var(--accent-color)', color: 'white' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-hover)'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent-color)'}
           >
             <MessageSquare className="w-4 h-4" />
             Додати відгук
@@ -65,11 +68,11 @@ const PropertyReviews = ({
 
       {/* Add Review Form */}
       {showReviewForm && (
-        <form onSubmit={handleCreateReview} className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-lg text-gray-900 mb-4">Залишити відгук</h3>
+        <form onSubmit={handleCreateReview} className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+          <h3 className="text-lg mb-4" style={{ color: 'var(--text-primary)' }}>Залишити відгук</h3>
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-700 mb-2">Оцінка</label>
+            <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Оцінка</label>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -79,11 +82,11 @@ const PropertyReviews = ({
                   className="text-2xl focus:outline-none"
                 >
                   <Star
-                    className={`w-6 h-6 ${
-                      star <= newReview.rating
-                        ? 'text-yellow-500 fill-yellow-500'
-                        : 'text-gray-300'
-                    }`}
+                    className="w-6 h-6"
+                    style={{
+                      color: star <= newReview.rating ? '#fbbf24' : 'var(--text-muted)',
+                      fill: star <= newReview.rating ? '#fbbf24' : 'none'
+                    }}
                   />
                 </button>
               ))}
@@ -91,12 +94,18 @@ const PropertyReviews = ({
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-700 mb-2">Коментар</label>
+            <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Коментар</label>
             <textarea
               value={newReview.comment}
               onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent"
+              style={{
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                borderColor: 'var(--border-color)',
+                '--tw-ring-color': 'var(--accent-color)'
+              }}
               placeholder="Розкажіть про ваш досвід..."
             />
           </div>
@@ -104,7 +113,10 @@ const PropertyReviews = ({
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+              style={{ backgroundColor: 'var(--accent-color)', color: 'white' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-hover)'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent-color)'}
             >
               <Send className="w-4 h-4" />
               Надіслати
@@ -115,7 +127,8 @@ const PropertyReviews = ({
                 setShowReviewForm(false)
                 setNewReview({ rating: 5, comment: '' })
               }}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{ backgroundColor: 'var(--text-muted)', color: 'white' }}
             >
               Скасувати
             </button>
@@ -125,11 +138,11 @@ const PropertyReviews = ({
 
       {/* Edit Review Form */}
       {editingReview && (
-        <form onSubmit={handleUpdateReview} className="mb-6 p-4 bg-blue-50 rounded-lg">
-          <h3 className="text-lg text-gray-900 mb-4">Редагувати відгук</h3>
+        <form onSubmit={handleUpdateReview} className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+          <h3 className="text-lg mb-4" style={{ color: 'var(--text-primary)' }}>Редагувати відгук</h3>
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-700 mb-2">Оцінка</label>
+            <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Оцінка</label>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -139,11 +152,11 @@ const PropertyReviews = ({
                   className="text-2xl focus:outline-none"
                 >
                   <Star
-                    className={`w-6 h-6 ${
-                      star <= editingReview.rating
-                        ? 'text-yellow-500 fill-yellow-500'
-                        : 'text-gray-300'
-                    }`}
+                    className="w-6 h-6"
+                    style={{
+                      color: star <= editingReview.rating ? '#fbbf24' : 'var(--text-muted)',
+                      fill: star <= editingReview.rating ? '#fbbf24' : 'none'
+                    }}
                   />
                 </button>
               ))}
@@ -151,12 +164,18 @@ const PropertyReviews = ({
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-700 mb-2">Коментар</label>
+            <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Коментар</label>
             <textarea
               value={editingReview.comment || ''}
               onChange={(e) => setEditingReview({ ...editingReview, comment: e.target.value })}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent"
+              style={{
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                borderColor: 'var(--border-color)',
+                '--tw-ring-color': 'var(--accent-color)'
+              }}
               placeholder="Оновіть ваш коментар..."
             />
           </div>
@@ -164,7 +183,10 @@ const PropertyReviews = ({
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+              style={{ backgroundColor: 'var(--accent-color)', color: 'white' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-hover)'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent-color)'}
             >
               <Send className="w-4 h-4" />
               Оновити
@@ -172,7 +194,8 @@ const PropertyReviews = ({
             <button
               type="button"
               onClick={() => setEditingReview(null)}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{ backgroundColor: 'var(--text-muted)', color: 'white' }}
             >
               Скасувати
             </button>
@@ -188,27 +211,27 @@ const PropertyReviews = ({
       ) : reviewsData && reviewsData.length > 0 ? (
         <div className="space-y-4">
           {reviewsData.map((review) => (
-            <div key={review.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={review.id} className="rounded-lg p-4" style={{ backgroundColor: 'var(--bg-secondary)', border: `1px solid var(--border-color)` }}>
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-semibold">
-                      {review.user?.email?.charAt(0).toUpperCase() || '?'}
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent-color)', color: 'white' }}>
+                    <span className="font-semibold">
+                      {(review.user?.name || review.user?.email)?.charAt(0).toUpperCase() || '?'}
                     </span>
                   </div>
                   <div>
-                    <p className="text-gray-900 font-medium">
-                      {review.user?.email || 'Користувач'}
+                    <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {review.user?.name || (review.user?.email ? review.user.email.split('@')[0] : 'Користувач')}
                     </p>
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
                           key={star}
-                          className={`w-4 h-4 ${
-                            star <= review.rating
-                              ? 'text-yellow-500 fill-yellow-500'
-                              : 'text-gray-300'
-                          }`}
+                          className="w-4 h-4"
+                          style={{
+                            color: star <= review.rating ? '#fbbf24' : 'var(--text-muted)',
+                            fill: star <= review.rating ? '#fbbf24' : 'none'
+                          }}
                         />
                       ))}
                     </div>
@@ -219,7 +242,10 @@ const PropertyReviews = ({
                   <div className="flex gap-2">
                     <button
                       onClick={() => setEditingReview(review)}
-                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                      className="p-1 rounded transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
+                      onMouseEnter={(e) => e.target.style.color = 'var(--accent-color)'}
+                      onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
                     >
                       <Edit className="w-4 h-4" />
                     </button>
@@ -229,7 +255,10 @@ const PropertyReviews = ({
                           onDeleteReview(review.id)
                         }
                       }}
-                      className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                      className="p-1 rounded transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
+                      onMouseEnter={(e) => e.target.style.color = 'var(--error-color)'}
+                      onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -238,10 +267,10 @@ const PropertyReviews = ({
               </div>
 
               {review.comment && (
-                <p className="text-gray-700 mb-2">{review.comment}</p>
+                <p className="mb-2" style={{ color: 'var(--text-primary)' }}>{review.comment}</p>
               )}
 
-              <p className="text-sm text-gray-500">
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 {new Date(review.createdAt).toLocaleDateString('uk-UA')}
               </p>
             </div>
@@ -249,10 +278,10 @@ const PropertyReviews = ({
         </div>
       ) : (
         <div className="text-center py-8">
-          <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-600">Поки що немає відгуків</p>
+          <MessageSquare className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+          <p style={{ color: 'var(--text-secondary)' }}>Поки що немає відгуків</p>
           {canAddReview && (
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
               Будьте першим, хто залишить відгук!
             </p>
           )}

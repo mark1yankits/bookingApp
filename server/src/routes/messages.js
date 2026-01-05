@@ -2,9 +2,44 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+// Configure multer for file uploads
+const uploadDir = 'uploads/messages';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log('Created uploads/messages directory');
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'), false);
+    }
+  }
+});
 
 router.get('/property/:propertyId', authenticate, async (req, res, next) => {
   try {
@@ -30,12 +65,22 @@ router.get('/property/:propertyId', authenticate, async (req, res, next) => {
 
     const messages = await prisma.message.findMany({
       where: { propertyId },
-      include: {
+      select: {
+        id: true,
+        propertyId: true,
+        senderId: true,
+        receiverId: true,
+        content: true,
+        isRead: true,
+        createdAt: true,
+        attachments: true,
+        messageType: true,
         sender: {
           select: {
             id: true,
             email: true,
             role: true,
+            phone: true,
           },
         },
         receiver: {
@@ -43,6 +88,7 @@ router.get('/property/:propertyId', authenticate, async (req, res, next) => {
             id: true,
             email: true,
             role: true,
+            phone: true,
           },
         },
       },
@@ -234,7 +280,16 @@ router.get('/my-messages', authenticate, async (req, res, next) => {
           { receiverId: userId },
         ],
       },
-      include: {
+      select: {
+        id: true,
+        propertyId: true,
+        senderId: true,
+        receiverId: true,
+        content: true,
+        isRead: true,
+        createdAt: true,
+        attachments: true,
+        messageType: true,
         property: {
           select: {
             id: true,
@@ -247,6 +302,7 @@ router.get('/my-messages', authenticate, async (req, res, next) => {
             id: true,
             email: true,
             role: true,
+            phone: true,
           },
         },
         receiver: {
@@ -254,6 +310,7 @@ router.get('/my-messages', authenticate, async (req, res, next) => {
             id: true,
             email: true,
             role: true,
+            phone: true,
           },
         },
       },
@@ -262,9 +319,12 @@ router.get('/my-messages', authenticate, async (req, res, next) => {
       },
     });
 
+    // Attachments are already in correct format
+    const transformedMessages = messages;
+
     // Group messages by conversation (property + other participant)
     const conversations = {};
-    messages.forEach((message) => {
+    transformedMessages.forEach((message) => {
       const otherUserId = message.senderId === userId ? message.receiverId : message.senderId;
       const conversationKey = `${message.propertyId}-${otherUserId}`;
 
@@ -298,18 +358,34 @@ router.get('/my-messages', authenticate, async (req, res, next) => {
 });
 
 // Create a new message
-router.post('/', authenticate, [
-  body('receiverId').isUUID().withMessage('Valid receiver ID is required'),
-  body('propertyId').isUUID().withMessage('Valid property ID is required'),
-  body('content').isLength({ min: 1 }).withMessage('Message content is required'),
-], async (req, res, next) => {
+router.post('/', authenticate, upload.array('attachments', 5), async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    console.log('Received message request:', {
+      body: req.body,
+      files: req.files ? req.files.length : 0,
+      filesDetails: req.files,
+      user: req.user?.id,
+      headers: req.headers['content-type']
+    });
+
+    // Manual validation for multipart form data
+    const { receiverId, propertyId, content = '' } = req.body;
+
+    if (!receiverId) {
+      console.log('Validation failed: receiverId missing');
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Receiver ID is required'
+      });
     }
 
-    const { receiverId, propertyId, content } = req.body;
+    if (!propertyId) {
+      console.log('Validation failed: propertyId missing');
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Property ID is required'
+      });
+    }
     const senderId = req.user.id;
 
     // Simple validation - just check if property exists and users are different
@@ -332,13 +408,53 @@ router.post('/', authenticate, [
       });
     }
 
+    // Process attachments
+    let attachments = [];
+    let messageType = 'text';
+
+    console.log('Processing attachments, files received:', req.files ? req.files.length : 0);
+
+    if (req.files && req.files.length > 0) {
+      attachments = req.files.map(file => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        url: `/uploads/messages/${file.filename}`
+      }));
+
+      console.log('Processed attachments:', attachments);
+
+      // Determine message type based on attachments
+      if (attachments.some(att => att.mimetype.startsWith('image/'))) {
+        messageType = 'image';
+      } else {
+        messageType = 'file';
+      }
+    }
+
+    // If no content but has attachments, set default content
+    const finalContent = content || (attachments.length > 0 ? `Надіслано ${attachments.length} файл(ів)` : '');
+
+    console.log('Final message data:', {
+      content: finalContent,
+      attachments: attachments,
+      messageType: messageType,
+      attachmentsCount: attachments.length
+    });
+
+    console.log('Final attachments to save:', attachments);
+    console.log('Message type:', messageType);
+
     const message = await prisma.message.create({
       data: {
         senderId,
         receiverId,
         propertyId,
-        content,
+        content: finalContent,
         isRead: false,
+        attachments: attachments.length > 0 ? attachments : undefined,
+        messageType,
       },
       include: {
         property: {
@@ -353,6 +469,7 @@ router.post('/', authenticate, [
             id: true,
             email: true,
             role: true,
+            phone: true,
           },
         },
         receiver: {
@@ -360,6 +477,7 @@ router.post('/', authenticate, [
             id: true,
             email: true,
             role: true,
+            phone: true,
           },
         },
       },
@@ -407,6 +525,34 @@ router.patch('/:id/read', authenticate, async (req, res, next) => {
     res.json({
       message: 'Message marked as read',
       message: updatedMessage,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get user phone number
+router.get('/user/:userId/phone', authenticate, async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        phone: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'User not found',
+      });
+    }
+
+    res.json({
+      phone: user.phone,
     });
   } catch (error) {
     next(error);

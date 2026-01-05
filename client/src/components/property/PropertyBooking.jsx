@@ -213,12 +213,12 @@ const PropertyBooking = ({ property, reviewsData, userBooking }) => {
     <div className="bg-[var(--bg-tertiary)] rounded-lg shadow-md p-6 sticky top-24 border border-[var(--border-color)] animate-slide-in">
       <div className="mb-6">
         <div className="flex items-baseline gap-2 mb-2">
-          <span className="text-3xl text-gray-900">{property.pricePerNight} ₴</span>
-          <span className="text-gray-600">за ніч</span>
+          <span className="text-3xl text-gray-900" style={{ color: 'var(--text-primary)' }}>{property.pricePerNight} ₴</span>
+          <span className="text-gray-600" style={{ color: 'var(--text-secondary)' }}>за ніч</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-          <span>{rating} ({reviewCount} відгуків)</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{rating} ({reviewCount} відгуків)</span>
         </div>
       </div>
 
@@ -295,22 +295,22 @@ const PropertyBooking = ({ property, reviewsData, userBooking }) => {
       {user ? (
         <>
           {(adults + children) > (property.maxGuests || 4) && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-800">
+            <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: 'var(--error-color)', opacity: 0.1, border: `1px solid var(--error-color)` }}>
+              <p className="text-sm" style={{ color: 'var(--error-color)' }}>
                 Перевищено максимальну кількість гостей ({property.maxGuests || 4})
               </p>
             </div>
           )}
 
           {calculateTotalPrice() > 0 && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <div className="flex justify-between mb-2 text-gray-700">
+            <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <div className="flex justify-between mb-2" style={{ color: 'var(--text-secondary)' }}>
                 <span>{property.pricePerNight} ₴ × {calculateNights()} {calculateNights() === 1 ? 'ніч' : calculateNights() < 5 ? 'ночі' : 'ночей'}</span>
                 <span>{calculateTotalPrice()} ₴</span>
               </div>
-              <div className="pt-2 border-t border-gray-300 flex justify-between text-lg">
-                <span className="text-gray-900">Всього</span>
-                <span className="text-gray-900">{calculateTotalPrice()} ₴</span>
+              <div className="pt-2 flex justify-between text-lg" style={{ borderTop: `1px solid var(--border-color)`, color: 'var(--text-primary)' }}>
+                <span>Всього</span>
+                <span>{calculateTotalPrice()} ₴</span>
               </div>
             </div>
           )}
@@ -318,48 +318,68 @@ const PropertyBooking = ({ property, reviewsData, userBooking }) => {
           <button
             onClick={handleBooking}
             disabled={(adults + children) > (property.maxGuests || 4) || bookingMutation.isPending}
-            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="w-full px-6 py-3 rounded-lg transition-colors disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: (adults + children) > (property.maxGuests || 4) || bookingMutation.isPending ? 'var(--text-muted)' : 'var(--accent-color)',
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              if (!(adults + children > (property.maxGuests || 4) || bookingMutation.isPending)) {
+                e.target.style.backgroundColor = 'var(--accent-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!(adults + children > (property.maxGuests || 4) || bookingMutation.isPending)) {
+                e.target.style.backgroundColor = 'var(--accent-color)';
+              }
+            }}
           >
             {bookingMutation.isPending ? 'Створення бронювання...' : 'Забронювати'}
           </button>
         </>
       ) : (
         <div className="text-center">
-          <p className="text-gray-600 mb-4">
+          <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
             Увійдіть, щоб забронювати
           </p>
           <button
             onClick={() => navigate('/login')}
-            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold"
+            className="w-full px-6 py-3 rounded-lg font-semibold"
+            style={{ backgroundColor: 'var(--accent-color)', color: 'white' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-hover)'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent-color)'}
           >
             Увійти
           </button>
         </div>
       )}
 
-      <p className="text-sm text-gray-600 text-center mt-4">
+      <p className="text-sm text-center mt-4" style={{ color: 'var(--text-muted)' }}>
         Ви поки не будете списані
       </p>
 
-      <div className="mt-6 pt-6 border-t border-gray-200">
+      <div className="mt-6 pt-6" style={{ borderTop: `1px solid var(--border-color)` }}>
         <div className="flex items-start gap-2">
-          <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--accent-color)' }} />
           <div>
-            <p className="text-sm text-gray-900 mb-1">Безкоштовне скасування</p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm mb-1" style={{ color: 'var(--text-primary)' }}>Безкоштовне скасування</p>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               Повернення коштів за 48 годин до заїзду
             </p>
           </div>
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-sm text-gray-600 mb-2">Господар</p>
-        <p className="text-gray-900 mb-3">{property.host?.email || property.ownerName || 'Невідомий господар'}</p>
+      <div className="mt-4 pt-4" style={{ borderTop: `1px solid var(--border-color)` }}>
+        <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Господар</p>
+        <p className="mb-3" style={{ color: 'var(--text-primary)' }}>{property.host?.name || (property.host?.email ? property.host.email.split('@')[0] : null) || property.ownerName || 'Невідомий господар'}</p>
         {user && (
           <button
             onClick={() => navigate(`/dashboard?tab=messages&propertyId=${property.id}`)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors"
+            style={{ backgroundColor: 'var(--accent-color)', color: 'white' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-hover)'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent-color)'}
           >
             <MessageSquare className="w-4 h-4" />
             Написати господарю
