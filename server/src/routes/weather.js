@@ -73,3 +73,4 @@ router.get('/:location', async (req, res, next) => {
 
 export default router;
 
+

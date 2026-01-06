@@ -22,10 +22,12 @@ export default function Dashboard() {
     }
   }, [searchParams])
 
+  const isHost = user?.role === 'host' || user?.role === 'admin'
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
-    queryKey: ['myBookings'],
+    queryKey: isHost ? ['hostBookings'] : ['myBookings'],
     queryFn: async () => {
-      const response = await api.get('/bookings/my-bookings')
+      const endpoint = isHost ? '/bookings/host-bookings' : '/bookings/my-bookings'
+      const response = await api.get(endpoint)
       return response.data.bookings
     },
     enabled: !!user,
@@ -116,11 +118,26 @@ export default function Dashboard() {
       return response.data
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['myBookings'])
+      queryClient.invalidateQueries(isHost ? ['hostBookings'] : ['myBookings'])
       alert('Бронювання успішно скасовано!')
     },
     onError: (error) => {
       alert(error.response?.data?.message || 'Помилка при скасуванні бронювання')
+    },
+  })
+
+  const updateBookingStatusMutation = useMutation({
+    mutationFn: async ({ bookingId, status }) => {
+      const response = await api.patch(`/bookings/${bookingId}/status`, { status })
+      return response.data
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries(['hostBookings'])
+      const statusText = variables.status === 'confirmed' ? 'підтверджено' : 'відхилено'
+      alert(`Бронювання успішно ${statusText}!`)
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || 'Помилка при оновленні статусу бронювання')
     },
   })
 
@@ -300,6 +317,10 @@ export default function Dashboard() {
     cancelBookingMutation.mutate({ bookingId, reason: reason || undefined })
   }
 
+  const handleUpdateBookingStatus = (bookingId, status) => {
+    updateBookingStatusMutation.mutate({ bookingId, status })
+  }
+
   const handlePropertySubmit = (formData) => {
     propertyMutation.mutate(formData)
   }
@@ -361,8 +382,10 @@ export default function Dashboard() {
             bookings={bookings}
             bookingsLoading={bookingsLoading}
             onCancelBooking={handleCancelBooking}
+            onUpdateBookingStatus={handleUpdateBookingStatus}
             getStatusIcon={getStatusIcon}
             getStatusText={getStatusText}
+            isHost={isHost}
           />
         )}
         {activeTab === 'properties' && (
